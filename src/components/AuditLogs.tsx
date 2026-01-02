@@ -10,33 +10,36 @@ interface AuditLog {
     department: string;
 }
 
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_u-FV9xhpVkCcCQU-RyWZX7Fbm67qDMzAYo6pZiXn1Cw1SV_2RZvdsdV7fy5bL4kRRBfeY9zy5W5f/pub?gid=1068085002&single=true&output=csv';
+const GOOGLE_SHEETS_API_KEY = 'AIzaSyAdevMJ2NR7ePdNkHcneWMMA-XtQJgdHU8';
+const SPREADSHEET_ID = '1BH3fOY-xclgp5OT1YoWgbDZ4ZkPNS-2fzwLdxoVg60U';
+const SHEET_NAME = 'Attendance';
+const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${GOOGLE_SHEETS_API_KEY}`;
 
-// Parse CSV to array of objects
-function parseCSV(csv: string): AuditLog[] {
-    const lines = csv.trim().split('\n');
-    if (lines.length < 2) return [];
+const CRM_BASE_URL = 'https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&pagetype=entityrecord&etn=crdfd_bangchamconghangngay&id=';
+
+// Map Sheets API rows to AuditLog objects
+function mapRowsToLogs(rows: string[][]): AuditLog[] {
+    if (!rows || rows.length < 2) return [];
 
     // Skip header row
-    const dataRows = lines.slice(1);
+    const dataRows = rows.slice(1);
 
-    return dataRows.map((line, index) => {
-        // Handle CSV with potential commas in values
-        const values = line.split(',');
+    return dataRows.map((row, index) => {
         return {
-            id: values[6] || String(index), // __PowerAppsId__
-            employee: values[0] || '',
-            modifiedBy: values[1] || '',
-            modifiedOn: values[2] || '',
-            checkIn: values[3] || '',
-            checkOut: values[4] || '',
-            department: values[5] || '',
+            id: row[6] || String(index), // Column 7 is ID (index 6)
+            employee: row[0] || '',
+            modifiedBy: row[1] || '',
+            modifiedOn: row[2] || '',
+            checkIn: row[3] || '',
+            checkOut: row[4] || '',
+            department: row[5] || '',
         };
     }).filter(log => log.employee); // Filter out empty rows
 }
 
 export const AuditLogs: React.FC = () => {
     const [logs, setLogs] = useState<AuditLog[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -44,14 +47,18 @@ export const AuditLogs: React.FC = () => {
         const fetchLogs = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(SHEET_CSV_URL);
-                if (!response.ok) throw new Error('Failed to fetch data');
-                const csv = await response.text();
-                const parsedLogs = parseCSV(csv);
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    const errorDetails = await response.json();
+                    console.error('Google Sheets API Error:', errorDetails);
+                    throw new Error(errorDetails.error?.message || 'Failed to fetch data');
+                }
+                const data = await response.json();
+                const parsedLogs = mapRowsToLogs(data.values);
                 setLogs(parsedLogs);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Error fetching audit logs:', err);
-                setError('Không thể tải dữ liệu từ Google Sheets');
+                setError(`Lỗi: ${err.message || 'Không thể tải dữ liệu'}`);
             } finally {
                 setLoading(false);
             }
@@ -72,6 +79,15 @@ export const AuditLogs: React.FC = () => {
         const parts = dateStr.split(' : ');
         return parts[1] || '-'; // Return time part
     };
+
+    const filteredLogs = logs.filter(log => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            log.employee.toLowerCase().includes(searchLower) ||
+            log.modifiedBy.toLowerCase().includes(searchLower) ||
+            log.modifiedOn.toLowerCase().includes(searchLower)
+        );
+    });
 
     if (loading) {
         return (
@@ -102,12 +118,35 @@ export const AuditLogs: React.FC = () => {
         <div className="audit-logs">
             {/* Header */}
             <div className="tab-navigation">
-                <span className="tab-btn active">
-                    📋 Audit Logs ({logs.length})
-                </span>
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                <div className="audit-header-content">
+                    <div className="search-container-audit">
+                        <span className="search-icon-audit">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm nhân viên, người sửa, ngày..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input-audit"
+                        />
+                        {searchTerm && (
+                            <button
+                                className="clear-search-audit"
+                                onClick={() => setSearchTerm('')}
+                                title="Xóa tìm kiếm"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
+                    {filteredLogs.length > 0 && (
+                        <span className="audit-results-count">
+                            {filteredLogs.length} kết quả
+                        </span>
+                    )}
+                </div>
+                <div className="audit-header-actions">
                     <a
-                        href="https://docs.google.com/spreadsheets/d/e/2PACX-1vR_u-FV9xhpVkCcCQU-RyWZX7Fbm67qDMzAYo6pZiXn1Cw1SV_2RZvdsdV7fy5bL4kRRBfeY9zy5W5f/pubhtml?gid=1068085002&single=true"
+                        href="https://docs.google.com/spreadsheets/d/1BH3fOY-xclgp5OT1YoWgbDZ4ZkPNS-2fzwLdxoVg60U/edit#gid=1068085002"
                         target="_blank"
                         rel="noreferrer"
                         className="external-link-icon"
@@ -120,9 +159,9 @@ export const AuditLogs: React.FC = () => {
 
             {/* List View */}
             <div className="leave-list-container">
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                     <div className="empty-state">
-                        <p>Chưa có dữ liệu audit log.</p>
+                        <p>{searchTerm ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có dữ liệu audit log.'}</p>
                     </div>
                 ) : (
                     <div className="table-wrapper">
@@ -136,10 +175,11 @@ export const AuditLogs: React.FC = () => {
                                     <th>Check-in</th>
                                     <th>Check-out</th>
                                     <th>Phòng ban</th>
+                                    <th className="audit-actions-col"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {logs.map((log) => (
+                                {filteredLogs.map((log) => (
                                     <tr key={log.id}>
                                         <td className="font-medium">{log.employee}</td>
                                         <td>{log.modifiedBy}</td>
@@ -152,6 +192,17 @@ export const AuditLogs: React.FC = () => {
                                             <span className="audit-new-value">{formatTime(log.checkOut)}</span>
                                         </td>
                                         <td>{log.department}</td>
+                                        <td className="text-right">
+                                            <a
+                                                href={`${CRM_BASE_URL}${log.id}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="audit-row-link"
+                                                title="Xem trên CRM"
+                                            >
+                                                👁️
+                                            </a>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

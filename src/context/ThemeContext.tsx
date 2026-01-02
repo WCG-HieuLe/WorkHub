@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'zinc' | 'gray-navy';
+type Theme = 'zinc' | 'slate';
 
 interface ThemeContextType {
     theme: Theme;
@@ -9,7 +9,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-// ...
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<Theme>(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -22,7 +22,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [theme]);
 
     const toggleTheme = () => {
-        setThemeState(prev => prev === 'zinc' ? 'gray-navy' : 'zinc');
+        setThemeState(prev => prev === 'zinc' ? 'slate' : 'zinc');
     };
 
     const setTheme = (newTheme: Theme) => {

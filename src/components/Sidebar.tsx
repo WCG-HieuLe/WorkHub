@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                     className="theme-toggle-sidebar"
                     onClick={toggleTheme}
-                    title={theme === 'zinc' ? 'Switch to Gray-Navy' : 'Switch to Zinc'}
+                    title={theme === 'zinc' ? 'Switch to Slate' : 'Switch to Zinc'}
                 >
                     {theme === 'zinc' ? '🌑' : '🌌'}
                 </button>

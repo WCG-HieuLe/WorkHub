@@ -1,96 +1,105 @@
 /* ===== CSS Variables & Reset ===== */
 :root {
-  /* Default Theme: Zinc (Dark Metallic) */
-  --bg-primary: #18181b;
+  /* Default Theme: Zinc (Deep Dark Metallic) */
+  --bg-primary: #09090b;
+  /* Zinc 950 */
+  --bg-secondary: rgba(24, 24, 27, 0.6);
+  /* Zinc 900 alpha */
+  --bg-card: #18181b;
   /* Zinc 900 */
-  --bg-secondary: rgba(39, 39, 42, 0.5);
-  /* Zinc 800 alpha */
-  --bg-card: #27272a;
+  --bg-hover: #27272a;
   /* Zinc 800 */
-  --bg-hover: #3f3f46;
-  /* Zinc 700 */
-  --bg-header: #27272a;
+  --bg-header: #18181b;
+  /* Zinc 900 */
 
-  --text-primary: #f4f4f5;
-  /* Zinc 100 */
-  --text-secondary: #a1a1aa;
-  /* Zinc 400 */
+  --text-primary: #fafafa;
+  /* Zinc 50 */
+  --text-secondary: #d4d4d8;
+  /* Zinc 300 */
   --text-muted: #71717a;
   /* Zinc 500 */
 
   --accent-primary: #a1a1aa;
-  /* Zinc 400 */
-  --accent-secondary: #d4d4d8;
-  /* Zinc 300 */
+  /* Zinc 400 - Subtle Metallic */
+  --accent-secondary: #52525b;
+  /* Zinc 600 */
 
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
 
-  --border: #3f3f46;
-  /* Zinc 700 */
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  --glass: rgba(39, 39, 42, 0.9);
-  --overlay-bg: rgba(0, 0, 0, 0.85);
-
-  --sidebar-bg: #27272a;
+  --border: #27272a;
   /* Zinc 800 */
-  --bg-calendar: #3f3f46;
-  /* Zinc 700 */
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --glass: rgba(24, 24, 27, 0.85);
+  --overlay-bg: rgba(0, 0, 0, 0.9);
+
+  --sidebar-bg: #18181b;
+  /* Zinc 900 */
+  --bg-calendar: #27272a;
+  /* Zinc 800 */
   --bg-cell: #18181b;
   /* Zinc 900 */
-  --bg-off-day: rgba(39, 39, 42, 0.5);
-  --border-cell: rgba(161, 161, 170, 0.2);
-  --bg-input: rgba(39, 39, 42, 0.6);
+  --bg-off-day: rgba(39, 39, 42, 0.4);
+  --border-cell: rgba(161, 161, 170, 0.15);
+  --bg-input: rgba(24, 24, 27, 0.7);
 }
 
-/* Zinc Theme */
+/* Zinc Theme - Replicated from root for clarity when toggling */
 [data-theme="zinc"] {
-  --bg-primary: #18181b;
-  --bg-secondary: rgba(39, 39, 42, 0.5);
-  --bg-card: #27272a;
-  --bg-hover: #3f3f46;
-  --bg-header: #27272a;
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
+  --bg-primary: #09090b;
+  --bg-secondary: rgba(24, 24, 27, 0.6);
+  --bg-card: #18181b;
+  --bg-hover: #27272a;
+  --bg-header: #18181b;
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
   --text-muted: #71717a;
   --accent-primary: #a1a1aa;
-  --accent-secondary: #d4d4d8;
-  --border: #3f3f46;
-  --sidebar-bg: #27272a;
-  --bg-calendar: #3f3f46;
+  --accent-secondary: #52525b;
+  --border: #27272a;
+  --sidebar-bg: #18181b;
+  --bg-calendar: #27272a;
   --bg-cell: #18181b;
-  --bg-off-day: rgba(39, 39, 42, 0.5);
-  --border-cell: rgba(161, 161, 170, 0.2);
-  --bg-input: rgba(39, 39, 42, 0.6);
+  --bg-off-day: rgba(39, 39, 42, 0.4);
+  --border-cell: rgba(161, 161, 170, 0.15);
+  --bg-input: rgba(24, 24, 27, 0.7);
 }
 
-/* Gray-Navy Theme (Slate) */
-[data-theme="gray-navy"] {
+/* Slate Theme (Professional Blue-Gray) */
+[data-theme="slate"] {
   --bg-primary: #020617;
   /* Slate 950 */
-  --bg-secondary: rgba(15, 23, 42, 0.5);
+  --bg-secondary: rgba(15, 23, 42, 0.6);
   /* Slate 900 alpha */
   --bg-card: #0f172a;
   /* Slate 900 */
   --bg-hover: #1e293b;
   /* Slate 800 */
   --bg-header: #0f172a;
+  /* Slate 900 */
+
   --text-primary: #f8fafc;
   /* Slate 50 */
   --text-secondary: #cbd5e1;
   /* Slate 300 */
-  --text-muted: #94a3b8;
-  /* Slate 400 */
+  --text-muted: #64748b;
+  /* Slate 500 */
+
   --accent-primary: #38bdf8;
-  /* Sky 400 */
+  /* Sky 400 - Vibrant accent for Slate */
   --accent-secondary: #0ea5e9;
   /* Sky 500 */
+
   --border: #1e293b;
+  /* Slate 800 */
   --sidebar-bg: #0f172a;
+  /* Slate 900 */
   --bg-calendar: #1e293b;
-  --bg-cell: #020617;
-  --bg-off-day: rgba(15, 23, 42, 0.6);
+  /* Slate 800 */
+  --bg-cell: #0f172a;
+  /* Slate 900 */
+  --bg-off-day: rgba(15, 23, 42, 0.5);
   --border-cell: rgba(148, 163, 184, 0.1);
   --bg-input: rgba(15, 23, 42, 0.7);
 }
@@ -2329,4 +2338,105 @@ header.header-container {
 
 .audit-arrow {
   color: var(--text-muted);
+}
+
+/* Audit Logs Search Styles */
+.search-container-audit {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  padding: 0.1rem 0.75rem;
+  width: 320px;
+  transition: all 0.2s;
+}
+
+.audit-header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.audit-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.audit-results-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.search-container-audit:focus-within {
+  border-color: var(--accent-primary);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.search-icon-audit {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-right: 0.5rem;
+}
+
+.search-input-audit {
+  background: transparent !important;
+  border: none !important;
+  padding: 0.4rem 0 !important;
+  color: var(--text-primary) !important;
+  font-size: 0.85rem !important;
+  width: 100%;
+  outline: none;
+  box-shadow: none !important;
+}
+
+.clear-search-audit {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.clear-search-audit:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.audit-id-cell {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.audit-row-link {
+  font-size: 1.1rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.audit-row-link:hover {
+  background: var(--bg-hover);
+  transform: scale(1.1);
+}
+
+.audit-actions-col {
+  width: 50px;
 }

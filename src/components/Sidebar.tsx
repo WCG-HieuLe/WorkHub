@@ -3,8 +3,8 @@ import { useTheme } from '../context/ThemeContext';
 
 
 interface SidebarProps {
-    currentView: 'personal' | 'team';
-    onChangeView: (view: 'personal' | 'team') => void;
+    currentView: 'personal' | 'team' | 'audit';
+    onChangeView: (view: 'personal' | 'team' | 'audit') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -41,6 +41,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                     <span className="icon">📝</span>
                     <span className="label">Phiếu đăng ký</span>
+                </button>
+
+                <button
+                    className={`nav-item ${currentView === 'audit' ? 'active' : ''}`}
+                    onClick={() => onChangeView('audit')}
+                >
+                    <span className="icon">📋</span>
+                    <span className="label">Audit Logs</span>
                 </button>
             </nav>
 

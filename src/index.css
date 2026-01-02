@@ -2212,7 +2212,9 @@ header.header-container {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Modal Styles */
@@ -2305,4 +2307,26 @@ header.header-container {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--accent-primary);
+}
+
+/* ===== Audit Logs Styles ===== */
+.audit-logs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.audit-old-value {
+  color: var(--danger);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.audit-new-value {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.audit-arrow {
+  color: var(--text-muted);
 }

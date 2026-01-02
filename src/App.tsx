@@ -8,6 +8,7 @@ import { DayDetail } from './components/DayDetail';
 import { WorkSummary } from './components/WorkSummary';
 import { Sidebar } from './components/Sidebar';
 import { LeaveDashboard } from './components/LeaveDashboard';
+import { AuditLogs } from './components/AuditLogs';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -20,7 +21,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -144,7 +145,7 @@ function App() {
                         year={year}
                         month={month}
                         onMonthChange={handleMonthChange}
-                        title={currentViewState === 'personal' ? '📊 Chấm công' : '📝 Phiếu đăng ký'}
+                        title={currentViewState === 'personal' ? '📊 Chấm công' : currentViewState === 'team' ? '📝 Phiếu đăng ký' : '📋 Audit Logs'}
                         showDateNav={true}
                         user={accounts[0] || null}
                         isAuthenticated={isAuthenticated}
@@ -205,9 +206,13 @@ function App() {
                                 )}
                             </main>
                         </>
-                    ) : (
+                    ) : currentViewState === 'team' ? (
                         <div className="main-content">
                             <LeaveDashboard employeeId={employeeId} year={year} month={month} />
+                        </div>
+                    ) : (
+                        <div className="main-content">
+                            <AuditLogs />
                         </div>
                     )}
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 
 interface AuditLog {
     id: string;
@@ -89,6 +90,38 @@ export const AuditLogs: React.FC = () => {
         );
     });
 
+    const handleExportExcel = () => {
+        try {
+            // Prepare data for export
+            const exportData = filteredLogs.map(log => ({
+                'Nhân viên': log.employee,
+                'Người chỉnh sửa': log.modifiedBy,
+                'Ngày sửa': log.modifiedOn,
+                'Ngày CC': formatDate(log.checkIn),
+                'Check-in': formatTime(log.checkIn),
+                'Check-out': formatTime(log.checkOut),
+                'Phòng ban': log.department
+            }));
+
+            // Create worksheet
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+            // Create workbook
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit Logs');
+
+            // Generate filename with current date
+            const date = new Date().toISOString().split('T')[0];
+            const fileName = `AuditLogs_${date}.xlsx`;
+
+            // Export file
+            XLSX.writeFile(workbook, fileName);
+        } catch (err) {
+            console.error('Error exporting to Excel:', err);
+            alert('Có lỗi xảy ra khi xuất file Excel');
+        }
+    };
+
     if (loading) {
         return (
             <div className="audit-logs">
@@ -145,6 +178,14 @@ export const AuditLogs: React.FC = () => {
                     )}
                 </div>
                 <div className="audit-header-actions">
+                    <button
+                        onClick={handleExportExcel}
+                        className="tab-btn active"
+                        style={{ marginRight: '1rem', padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                        title="Xuất file Excel"
+                    >
+                        <span>📊</span> Xuất Excel
+                    </button>
                     <a
                         href="https://docs.google.com/spreadsheets/d/***REDACTED_SPREADSHEET_ID***/edit#gid=1068085002"
                         target="_blank"

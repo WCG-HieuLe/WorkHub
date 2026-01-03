@@ -1,7 +1,7 @@
 import { AccountInfo, IPublicClientApplication } from "@azure/msal-browser";
 import { dataverseConfig } from "../config/authConfig";
 import { DayRecord } from "../types/types";
-import { getStandardHours } from '../utils/workUtils';
+import { getStandardHours, formatDate } from '../utils/workUtils';
 
 // Interface cho data từ Dataverse
 interface DataverseChamCong {
@@ -147,15 +147,13 @@ export async function fetchChamCongData(
     employeeId?: string | null
 ): Promise<DayRecord[]> {
     // Tạo filter theo tháng
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0);
-
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = formatDate(year, month, 1);
+    const nextMonthDate = new Date(year, month + 1, 1);
+    const startStrNext = formatDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1);
 
     // 1. Fetch Timekeeping Data (Bang Cham Cong)
     const timekeepingPromise = (async () => {
-        let filter = `statecode eq 0 and crdfd_ngay ge ${startStr} and crdfd_ngay le ${endStr}`;
+        let filter = `statecode eq 0 and crdfd_ngay ge ${startStr} and crdfd_ngay lt ${startStrNext}`;
         if (employeeId) {
             filter += ` and _crdfd_tennhanvien_value eq ${employeeId}`;
         }
@@ -176,7 +174,7 @@ export async function fetchChamCongData(
     })();
 
     // 2. Fetch Registration Data (Phieu Dang Ky)
-    const registrationPromise = employeeId ? fetchPhieuDangKy(accessToken, employeeId, startStr, endStr) : Promise.resolve([]);
+    const registrationPromise = employeeId ? fetchPhieuDangKy(accessToken, employeeId, startStr, startStrNext) : Promise.resolve([]);
 
     try {
         const [timekeepingData, registrationData] = await Promise.all([timekeepingPromise, registrationPromise]);
@@ -594,19 +592,18 @@ export async function fetchTeamRegistrations(
 
     // Nếu có month/year, filter theo crdfd_tungay
     if (month !== undefined && year !== undefined) {
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
-        const startStr = startDate.toISOString().split('T')[0];
-        const endStr = endDate.toISOString().split('T')[0];
+        const startStr = formatDate(year, month, 1);
+        const nextMonthDate = new Date(year, month + 1, 1);
+        const startStrNext = formatDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1);
 
         // Logic: Lấy các phiếu nằm trong tháng này OR status = Pending (để luôn thấy việc cần làm)
-        // filter = `(${filter} and crdfd_tungay ge ${startStr} and crdfd_tungay le ${endStr}) or (crdfd_captrenduyet eq ${ApprovalStatus.ChuaDuyet})`;
+        // filter = `(${filter} and crdfd_tungay ge ${startStr} and crdfd_tungay lt ${startStrNext}) or (crdfd_captrenduyet eq ${ApprovalStatus.ChuaDuyet})`;
 
         // Simplified: Just fetch all for now, or fetch by range. 
         // User request: "duyệt các đơn", "xem thống kê". 
         // So we need ALL Pending AND History for this month.
 
-        filter = `(crdfd_captrenduyet eq ${ApprovalStatus.ChuaDuyet}) or (crdfd_tungay ge ${startStr} and crdfd_tungay le ${endStr})`;
+        filter = `(crdfd_captrenduyet eq ${ApprovalStatus.ChuaDuyet}) or (crdfd_tungay ge ${startStr} and crdfd_tungay lt ${startStrNext})`;
     }
 
     const select = "crdfd_phieuangkyid,_crdfd_nhanvien_value,crdfd_loaiangky,crdfd_tungay,crdfd_enngay,crdfd_sogio2,crdfd_diengiai,crdfd_captrenduyet";
@@ -660,13 +657,12 @@ export async function fetchPersonalRegistrations(
 
     // Add date filter if year/month provided
     if (year !== undefined && month !== undefined) {
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
-        const startStr = startDate.toISOString().split('T')[0];
-        const endStr = endDate.toISOString().split('T')[0];
+        const startStr = formatDate(year, month, 1);
+        const nextMonthDate = new Date(year, month + 1, 1);
+        const startStrNext = formatDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1);
 
         // Filter registrations that overlap with the selected month
-        filter += ` and crdfd_tungay le ${endStr} and crdfd_enngay ge ${startStr}`;
+        filter += ` and crdfd_tungay lt ${startStrNext} and crdfd_enngay ge ${startStr}`;
     }
 
     const select = "crdfd_phieuangkyid,_crdfd_nhanvien_value,crdfd_loaiangky,crdfd_tungay,crdfd_enngay,crdfd_sogio2,crdfd_diengiai,crdfd_captrenduyet";

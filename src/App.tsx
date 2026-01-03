@@ -9,6 +9,7 @@ import { WorkSummary } from './components/WorkSummary';
 import { Sidebar } from './components/Sidebar';
 import { LeaveDashboard } from './components/LeaveDashboard';
 import { AuditLogs } from './components/AuditLogs';
+import { Management } from './components/Management';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -21,7 +22,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -145,7 +146,12 @@ function App() {
                         year={year}
                         month={month}
                         onMonthChange={handleMonthChange}
-                        title={currentViewState === 'personal' ? '📊 Chấm công' : currentViewState === 'team' ? '📝 Phiếu đăng ký' : '📋 Audit Logs'}
+                        title={
+                            currentViewState === 'personal' ? '📊 Attendance' :
+                                currentViewState === 'team' ? '📝 Registration' :
+                                    currentViewState === 'audit' ? '📋 Audit Logs' :
+                                        '⚙️ Management'
+                        }
                         showDateNav={true}
                         user={accounts[0] || null}
                         isAuthenticated={isAuthenticated}
@@ -210,9 +216,13 @@ function App() {
                         <div className="main-content">
                             <LeaveDashboard employeeId={employeeId} year={year} month={month} />
                         </div>
-                    ) : (
+                    ) : currentViewState === 'audit' ? (
                         <div className="main-content">
                             <AuditLogs />
+                        </div>
+                    ) : (
+                        <div className="main-content">
+                            <Management />
                         </div>
                     )}
                 </div>

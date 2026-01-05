@@ -18,6 +18,25 @@ const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}
 
 const CRM_BASE_URL = 'https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&pagetype=entityrecord&etn=crdfd_bangchamconghangngay&id=';
 
+// Helper to parse date string "DD/MM/YYYY : HH:mm:ss" to timestamp
+function parseDateLog(dateStr: string): number {
+    if (!dateStr) return 0;
+    try {
+        const parts = dateStr.split(' : ');
+        const datePart = parts[0];
+        const timePart = parts[1] || '00:00:00';
+
+        const [day, month, year] = datePart.split('/').map(Number);
+        const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+        if (!day || !month || !year) return 0;
+
+        return new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0).getTime();
+    } catch (e) {
+        return 0;
+    }
+}
+
 // Map Sheets API rows to AuditLog objects
 function mapRowsToLogs(rows: string[][]): AuditLog[] {
     if (!rows || rows.length < 2) return [];
@@ -56,6 +75,10 @@ export const AuditLogs: React.FC = () => {
                 }
                 const data = await response.json();
                 const parsedLogs = mapRowsToLogs(data.values);
+
+                // Sort by modifiedOn DESC (newest first)
+                parsedLogs.sort((a, b) => parseDateLog(b.modifiedOn) - parseDateLog(a.modifiedOn));
+
                 setLogs(parsedLogs);
             } catch (err: any) {
                 console.error('Error fetching audit logs:', err);

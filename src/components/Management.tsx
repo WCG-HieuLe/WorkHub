@@ -28,22 +28,10 @@ const adminGroups: AdminGroup[] = [
         ),
         links: [
             {
-                emoji: '⚡',
-                title: 'Power Platform Admin',
-                url: 'https://admin.powerplatform.microsoft.com/home',
-                description: 'Quản trị Power Platform, Environments, và Solutions.'
-            },
-            {
                 emoji: '💼',
                 title: 'Business Management',
                 url: 'https://wecare-ii.crm5.dynamics.com/main.aspx?settingsonly=true#438100364',
                 description: 'Cấu hình hệ thống và quản lý dữ liệu Dynamics 365.'
-            },
-            {
-                emoji: '📊',
-                title: 'Power BI Admin',
-                url: 'https://app.powerbi.com/admin-portal/tenantSettings?experience=fabric-developer&clientSideAuth=0',
-                description: 'Quản trị báo cáo, dataset và thiết lập Power BI / Fabric.'
             },
             {
                 emoji: '🤖',
@@ -52,40 +40,10 @@ const adminGroups: AdminGroup[] = [
                 description: 'Thiết kế và quản trị các AI chatbot (Copilots).'
             },
             {
-                emoji: '🏢',
-                title: 'Microsoft 365 Admin',
-                url: 'https://admin.cloud.microsoft/?#/homepage',
-                description: 'Trung tâm quản trị tổng thể dịch vụ Microsoft 365.'
-            },
-            {
-                emoji: '💬',
-                title: 'MS Teams Admin',
-                url: 'https://admin.teams.microsoft.com/users',
-                description: 'Quản lý người dùng, thiết bị và chính sách Microsoft Teams.'
-            },
-            {
                 emoji: '📧',
                 title: 'Exchange Admin',
                 url: 'https://admin.exchange.microsoft.com/#/',
                 description: 'Quản trị hòm thư, nhóm và bảo mật email Exchange.'
-            },
-            {
-                emoji: '🔑',
-                title: 'Microsoft Entra',
-                url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/EntraLanding.ReactView',
-                description: 'Trung tâm quản trị định danh và truy cập Microsoft Entra.'
-            },
-            {
-                emoji: '📂',
-                title: 'SharePoint Admin',
-                url: 'https://wecarei-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/home',
-                description: 'Quản trị SharePoint Online, Sites và OneDrive.'
-            },
-            {
-                emoji: '🛡️',
-                title: 'Microsoft Purview',
-                url: 'https://purview.microsoft.com/home?tid=08dd70ab-ac3b-4a33-acd1-ef3fe1729e61',
-                description: 'Quản lý tuân thủ, bảo mật dữ liệu và quản trị thông tin.'
             },
             {
                 emoji: '🔍',
@@ -94,10 +52,52 @@ const adminGroups: AdminGroup[] = [
                 description: 'Công cụ thử nghiệm và tra cứu Microsoft Graph API.'
             },
             {
+                emoji: '🏢',
+                title: 'MS 365 Admin',
+                url: 'https://admin.cloud.microsoft/?#/homepage',
+                description: 'Trung tâm quản trị tổng thể dịch vụ Microsoft 365.'
+            },
+            {
+                emoji: '🔑',
+                title: 'MS Entra',
+                url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/EntraLanding.ReactView',
+                description: 'Trung tâm quản trị định danh và truy cập Microsoft Entra.'
+            },
+            {
                 emoji: '🤝',
                 title: 'MS Partner Center',
                 url: 'https://partner.microsoft.com/dashboard/v2/account-settings/account-management/home',
                 description: 'Cổng thông tin đối tác và quản lý tài khoản Microsoft Partner.'
+            },
+            {
+                emoji: '🛡️',
+                title: 'MS Purview',
+                url: 'https://purview.microsoft.com/home?tid=08dd70ab-ac3b-4a33-acd1-ef3fe1729e61',
+                description: 'Quản lý tuân thủ, bảo mật dữ liệu và quản trị thông tin.'
+            },
+            {
+                emoji: '💬',
+                title: 'MS Teams Admin',
+                url: 'https://admin.teams.microsoft.com/users',
+                description: 'Quản lý người dùng, thiết bị và chính sách Microsoft Teams.'
+            },
+            {
+                emoji: '📊',
+                title: 'Power BI Admin',
+                url: 'https://app.powerbi.com/admin-portal/tenantSettings?experience=fabric-developer&clientSideAuth=0',
+                description: 'Quản trị báo cáo, dataset và thiết lập Power BI / Fabric.'
+            },
+            {
+                emoji: '⚡',
+                title: 'Power Platform Admin',
+                url: 'https://admin.powerplatform.microsoft.com/home',
+                description: 'Quản trị Power Platform, Environments, và Solutions.'
+            },
+            {
+                emoji: '📂',
+                title: 'SharePoint Admin',
+                url: 'https://wecarei-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/home',
+                description: 'Quản trị SharePoint Online, Sites và OneDrive.'
             }
         ]
     },

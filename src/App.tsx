@@ -10,6 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import { LeaveDashboard } from './components/LeaveDashboard';
 import { AuditLogs } from './components/AuditLogs';
 import { Management } from './components/Management';
+import { Tools } from './components/Tools';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -22,7 +23,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -147,10 +148,11 @@ function App() {
                         month={month}
                         onMonthChange={handleMonthChange}
                         title={
-                            currentViewState === 'personal' ? '📊 Attendance' :
-                                currentViewState === 'team' ? '📝 Registration' :
-                                    currentViewState === 'audit' ? '📋 Audit Logs' :
-                                        '⚙️ Management'
+                            currentViewState === 'personal' ? '📊 TimeSheet' :
+                                currentViewState === 'team' ? '📝 Adjustment Request' :
+                                    currentViewState === 'audit' ? '📋 Change History' :
+                                        currentViewState === 'tools' ? '🛠️ Tools' :
+                                            '⚙️ Admin Page'
                         }
                         showDateNav={true}
                         user={accounts[0] || null}
@@ -219,6 +221,10 @@ function App() {
                     ) : currentViewState === 'audit' ? (
                         <div className="main-content">
                             <AuditLogs />
+                        </div>
+                    ) : currentViewState === 'tools' ? (
+                        <div className="main-content">
+                            <Tools />
                         </div>
                     ) : (
                         <div className="main-content">

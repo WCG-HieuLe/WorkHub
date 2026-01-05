@@ -4,13 +4,13 @@ import { InteractionStatus } from '@azure/msal-browser';
 
 import { Header } from './components/Header';
 import { Calendar } from './components/Calendar';
-import { DayDetail } from './components/DayDetail';
-import { WorkSummary } from './components/WorkSummary';
 import { Sidebar } from './components/Sidebar';
 import { LeaveDashboard } from './components/LeaveDashboard';
 import { AuditLogs } from './components/AuditLogs';
 import { Management } from './components/Management';
 import { Tools } from './components/Tools';
+import { DayDetail } from './components/DayDetail';
+import { WorkSummary } from './components/WorkSummary';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -134,6 +134,17 @@ function App() {
         } as DayRecord);
     }, [records, selectedDate]);
 
+    const getHeaderTitle = () => {
+        switch (currentViewState) {
+            case 'personal': return 'WorkHub - Bảng chấm công';
+            case 'team': return 'WorkHub - Phê duyệt điều chỉnh';
+            case 'audit': return 'WorkHub - Lịch sử thay đổi';
+            case 'management': return 'WorkHub - Admin Page';
+            case 'tools': return 'WorkHub - Công cụ hỗ trợ';
+            default: return 'WorkHub';
+        }
+    };
+
     return (
         <ThemeProvider>
             <div className="app">
@@ -147,13 +158,7 @@ function App() {
                         year={year}
                         month={month}
                         onMonthChange={handleMonthChange}
-                        title={
-                            currentViewState === 'personal' ? '📊 TimeSheet' :
-                                currentViewState === 'team' ? '📝 Adjustment Request' :
-                                    currentViewState === 'audit' ? '📋 Change History' :
-                                        currentViewState === 'tools' ? '🛠️ Tools' :
-                                            '⚙️ Admin Page'
-                        }
+                        title={getHeaderTitle()}
                         showDateNav={true}
                         user={accounts[0] || null}
                         isAuthenticated={isAuthenticated}
@@ -179,7 +184,7 @@ function App() {
 
                                 {!isAuthenticated && inProgress === InteractionStatus.None && (
                                     <div className="welcome-screen">
-                                        <h2>Welcome to Attendance App</h2>
+                                        <h2>Welcome to WorkHub</h2>
                                         <p>Vui lòng đăng nhập để xem dữ liệu chấm công của bạn.</p>
                                     </div>
                                 )}
@@ -219,9 +224,9 @@ function App() {
                             <LeaveDashboard employeeId={employeeId} year={year} month={month} />
                         </div>
                     ) : currentViewState === 'audit' ? (
-                        <div className="main-content">
+                        <main className="main-content">
                             <AuditLogs />
-                        </div>
+                        </main>
                     ) : currentViewState === 'tools' ? (
                         <div className="main-content">
                             <Tools />

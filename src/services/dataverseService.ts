@@ -739,6 +739,54 @@ export async function updateRegistrationStatus(
     }
 }
 
+/**
+ * Cập nhật thông tin phiếu đăng ký (Edit Mode)
+ */
+export async function updatePhieuDangKy(
+    accessToken: string,
+    registrationId: string,
+    data: {
+        type?: number;
+        startDate?: string;
+        endDate?: string;
+        hours?: number;
+        reason?: string;
+    }
+): Promise<boolean> {
+    const url = `${dataverseConfig.baseUrl}/crdfd_phieuangkies(${registrationId})`;
+
+    const payload: any = {};
+    if (data.type !== undefined) payload.crdfd_loaiangky = data.type;
+    if (data.startDate !== undefined) payload.crdfd_tungay = data.startDate;
+    if (data.endDate !== undefined) payload.crdfd_enngay = data.endDate;
+    if (data.hours !== undefined) payload.crdfd_sogio2 = data.hours;
+    if (data.reason !== undefined) payload.crdfd_diengiai = data.reason;
+
+    try {
+        const response = await fetch(url, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            return true;
+        } else {
+            console.error("Error updating registration:", response.status, await response.text());
+            return false;
+        }
+    } catch (e) {
+        console.error("Exception updating registration:", e);
+        return false;
+    }
+}
+
 // ==========================================
 // DNTT (Đề nghị thanh toán) SERVICES
 // ==========================================

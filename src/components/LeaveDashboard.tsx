@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText } from '../services/dataverseService';
+import { LeaveDetailModal } from './LeaveDetailModal';
 
 interface LeaveDashboardProps {
     employeeId: string | null;
@@ -266,92 +267,66 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
 
             {/* Detail Modal */}
             {selectedItem && (
-                <div className="modal-overlay" onClick={closeModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>
-                                {selectedType === 'registration' ? 'Chi tiết phiếu đăng ký' : 'Chi tiết đề nghị thanh toán'}
-                            </h3>
-                            <button className="close-modal-btn" onClick={closeModal}>&times;</button>
-                        </div>
-                        <div className="modal-body">
-                            {selectedType === 'registration' ? (
-                                <>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Loại đăng ký</label>
-                                        <div className="detail-value highlight">
-                                            {getRegistrationTypeName((selectedItem as TeamRegistration).crdfd_loaiangky)}
-                                        </div>
+                selectedType === 'registration' ? (
+                    <LeaveDetailModal
+                        registration={selectedItem as TeamRegistration}
+                        onClose={closeModal}
+                        onUpdateSuccess={() => {
+                            loadData();
+                            closeModal();
+                        }}
+                    />
+                ) : (
+                    <div className="modal-overlay" onClick={closeModal}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>Chi tiết đề nghị thanh toán</h3>
+                                <button className="close-modal-btn" onClick={closeModal}>&times;</button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="detail-field">
+                                    <label className="detail-label">Loại hồ sơ</label>
+                                    <div className="detail-value highlight">
+                                        {(selectedItem as DNTTRecord).cr1bb_loaihosothanhtoan || '-'}
                                     </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Thời gian</label>
-                                        <div className="detail-value">
-                                            {formatDate((selectedItem as TeamRegistration).crdfd_tungay)} - {formatDate((selectedItem as TeamRegistration).crdfd_enngay)}
-                                        </div>
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Số tiền đề nghị</label>
+                                    <div className="detail-value highlight" style={{ color: 'var(--success)' }}>
+                                        {formatCurrency((selectedItem as DNTTRecord).cr44a_sotien_de_nghi)}
                                     </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Số giờ</label>
-                                        <div className="detail-value">{(selectedItem as TeamRegistration).crdfd_sogio2 || '0'} giờ</div>
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Diễn giải</label>
+                                    <div className="detail-value">{(selectedItem as DNTTRecord).cr1bb_diengiai || '-'}</div>
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Ngày tạo</label>
+                                    <div className="detail-value">{formatDate((selectedItem as DNTTRecord).createdon)}</div>
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Trạng thái đề nghị</label>
+                                    <div className="detail-value">
+                                        <span className={`status-badge ${(selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan === 'Đã duyệt' ? 'status-approved' :
+                                            (selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan === 'Từ chối duyệt' ? 'status-rejected' : 'status-pending'}`}>
+                                            {(selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan || 'N/A'}
+                                        </span>
                                     </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Lý do</label>
-                                        <div className="detail-value">{(selectedItem as TeamRegistration).crdfd_diengiai || '-'}</div>
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Kế toán tổng hợp</label>
+                                    <div className="detail-value">
+                                        {(selectedItem as DNTTRecord).cr44a_ketoantonghop || '-'}
                                     </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Trạng thái duyệt</label>
-                                        <div className="detail-value">
-                                            <span className={`status-badge ${getStatusClass((selectedItem as TeamRegistration).crdfd_captrenduyet)}`}>
-                                                {getApprovalStatusText((selectedItem as TeamRegistration).crdfd_captrenduyet)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Loại hồ sơ</label>
-                                        <div className="detail-value highlight">
-                                            {(selectedItem as DNTTRecord).cr1bb_loaihosothanhtoan || '-'}
-                                        </div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Số tiền đề nghị</label>
-                                        <div className="detail-value highlight" style={{ color: 'var(--success)' }}>
-                                            {formatCurrency((selectedItem as DNTTRecord).cr44a_sotien_de_nghi)}
-                                        </div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Diễn giải</label>
-                                        <div className="detail-value">{(selectedItem as DNTTRecord).cr1bb_diengiai || '-'}</div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Ngày tạo</label>
-                                        <div className="detail-value">{formatDate((selectedItem as DNTTRecord).createdon)}</div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Trạng thái đề nghị</label>
-                                        <div className="detail-value">
-                                            <span className={`status-badge ${(selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan === 'Đã duyệt' ? 'status-approved' :
-                                                (selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan === 'Từ chối duyệt' ? 'status-rejected' : 'status-pending'}`}>
-                                                {(selectedItem as DNTTRecord).cr44a_trangthai_denghithanhtoan || 'N/A'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Kế toán tổng hợp</label>
-                                        <div className="detail-value">
-                                            {(selectedItem as DNTTRecord).cr44a_ketoantonghop || '-'}
-                                        </div>
-                                    </div>
-                                    <div className="detail-field">
-                                        <label className="detail-label">Người tạo</label>
-                                        <div className="detail-value">{(selectedItem as DNTTRecord).ownerName || '-'}</div>
-                                    </div>
-                                </>
-                            )}
+                                </div>
+                                <div className="detail-field">
+                                    <label className="detail-label">Người tạo</label>
+                                    <div className="detail-value">{(selectedItem as DNTTRecord).ownerName || '-'}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )
             )}
         </div>
     );

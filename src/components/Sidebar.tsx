@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import {
-    LayoutDashboard,
-    Calendar,
-    Settings as SettingsIcon,
-    LogOut,
-    History,
-    Wrench,
-    ShieldCheck,
-    ChevronDown,
-    ChevronRight,
-    ClipboardList
+    Settings as SettingsIcon
 } from 'lucide-react';
-import { useMsal } from "@azure/msal-react";
 import { Settings } from './Settings';
 
 interface SidebarProps {
@@ -23,7 +13,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     currentView,
     onChangeView
 }) => {
-    const { instance } = useMsal();
     const [managementOpen, setManagementOpen] = useState(true);
     const [attendanceOpen, setAttendanceOpen] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);

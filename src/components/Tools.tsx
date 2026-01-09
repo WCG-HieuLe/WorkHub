@@ -1,16 +1,21 @@
 import React from 'react';
-import { Github, BarChart3, GraduationCap, ShieldCheck, Zap } from 'lucide-react';
+import { Github, BarChart3, GraduationCap, ShieldCheck, Zap, Figma } from 'lucide-react';
 
 const tools = [
     {
         name: 'Github',
-        url: 'https://github.com/Wecare-tool',
+        url: 'https://github.com/Wecare-tool?tab=repositories',
         icon: <Github size={48} strokeWidth={1.5} />
     },
     {
         name: 'Project Tracker',
         url: 'https://project-tracker-573735243623.us-west1.run.app/',
         icon: <BarChart3 size={48} strokeWidth={1.5} />
+    },
+    {
+        name: 'Figma',
+        url: 'https://www.figma.com/files/team/1160476424433627132/recents-and-sharing?fuid=1160476417594164077',
+        icon: <Figma size={48} strokeWidth={1.5} />
     },
     {
         name: 'Technology Training',

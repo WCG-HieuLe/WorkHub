@@ -6,8 +6,8 @@ import {
 import { Settings } from './Settings';
 
 interface SidebarProps {
-    currentView: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse';
-    onChangeView: (view: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse') => void;
+    currentView: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-inventory' | 'warehouse-flow';
+    onChangeView: (view: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-inventory' | 'warehouse-flow') => void;
     user: AccountInfo | null;
     isAuthenticated: boolean;
     onLogin: () => void;
@@ -85,11 +85,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {warehouseOpen && (
                             <div className="nav-group-items">
                                 <button
-                                    className={`nav-item ${currentView === 'warehouse' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('warehouse')}
+                                    className={`nav-item ${currentView === 'warehouse-tables' ? 'active' : ''}`}
+                                    onClick={() => onChangeView('warehouse-tables')}
+                                >
+                                    <span className="icon">📊</span>
+                                    <span className="label">Tables</span>
+                                </button>
+                                <button
+                                    className={`nav-item ${currentView === 'warehouse-inventory' ? 'active' : ''}`}
+                                    onClick={() => onChangeView('warehouse-inventory')}
                                 >
                                     <span className="icon">📦</span>
-                                    <span className="label">Transaction Sale</span>
+                                    <span className="label">Check tồn kho</span>
+                                </button>
+                                <button
+                                    className={`nav-item ${currentView === 'warehouse-flow' ? 'active' : ''}`}
+                                    onClick={() => onChangeView('warehouse-flow')}
+                                >
+                                    <span className="icon">🌊</span>
+                                    <span className="label">Flow/Dataflow Monitor</span>
                                 </button>
                             </div>
                         )}

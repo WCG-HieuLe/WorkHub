@@ -11,7 +11,7 @@ import { Management } from './components/Management';
 import { Tools } from './components/Tools';
 import { DayDetail } from './components/DayDetail';
 import { WorkSummary } from './components/WorkSummary';
-import { TransactionSalesTable } from './components/Warehouse/TransactionSales';
+import { WarehouseLayout } from './components/Warehouse/WarehouseLayout';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -24,7 +24,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-inventory' | 'warehouse-flow'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -142,7 +142,10 @@ function App() {
             case 'audit': return 'Change History';
             case 'management': return 'Admin Page';
             case 'tools': return 'Tools';
-            case 'warehouse': return 'Transaction Sale';
+            case 'warehouse-tables': return 'Warehouse Tables';
+            case 'warehouse-inventory': return 'Inventory Check';
+            case 'warehouse-flow': return 'Flow Monitor';
+            case 'warehouse': return 'Warehouse';
             default: return 'WorkHub';
         }
     };
@@ -233,9 +236,13 @@ function App() {
                         <div className="main-content">
                             <Tools />
                         </div>
-                    ) : currentViewState === 'warehouse' ? (
+                    ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-inventory' || currentViewState === 'warehouse-flow' ? (
                         <div className="main-content">
-                            <TransactionSalesTable />
+                            <WarehouseLayout activeView={
+                                currentViewState === 'warehouse-tables' ? 'tables' :
+                                    currentViewState === 'warehouse-inventory' ? 'inventory' :
+                                        currentViewState === 'warehouse-flow' ? 'flow' : undefined
+                            } />
                         </div>
                     ) : (
                         <div className="main-content">

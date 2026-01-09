@@ -1026,7 +1026,7 @@ export async function fetchTransactionSales(
     const filter = "statecode eq 0";
     const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
 
-    const url = `${dataverseConfig.baseUrl}/crdfd_transactionsaleses?${query}`;
+    const url = `${dataverseConfig.baseUrl}/crdfd_transactionsales?${query}`;
 
     try {
         const response = await fetch(url, {
@@ -1070,6 +1070,101 @@ export async function fetchTransactionSales(
 
     } catch (e) {
         console.error("Exception fetching Transaction Sales:", e);
+        return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+    }
+}
+
+// ==========================================
+// INVENTORY SERVICES
+// ==========================================
+
+export interface InventoryItem {
+    crdfd_kho_binh_dinhid: string; // Primary Key
+    _crdfd_tensanphamlookup_value?: string;
+    productName?: string; // Formatted Value from lookup
+    crdfd_masp?: string; // Mã SP
+    crdfd_onvi?: string; // Đơn vị
+    crdfd_tonkhothucte?: number; // Tồn kho thực tế
+    crdfd_tonkholythuyet?: number; // Tồn kho lý thuyết
+    cr1bb_tonkholythuyetbomua?: number; // Tồn kho lý thuyết - Bỏ mua
+    _crdfd_vitrikho_value?: string;
+    warehouseLocationName?: string; // Formatted Value from lookup
+}
+
+export interface InventoryPaginatedResponse {
+    data: InventoryItem[];
+    totalCount: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
+export async function fetchInventory(
+    accessToken: string,
+    page: number = 1,
+    pageSize: number = 50
+): Promise<InventoryPaginatedResponse> {
+    const skip = (page - 1) * pageSize;
+
+    // Select columns
+    const columns = [
+        "crdfd_kho_binh_dinhid",
+        "_crdfd_tensanphamlookup_value",
+        "crdfd_masp",
+        "crdfd_onvi",
+        "crdfd_tonkhothucte",
+        "crdfd_tonkholythuyet",
+        "cr1bb_tonkholythuyetbomua",
+        "_crdfd_vitrikho_value"
+    ];
+
+    const select = columns.join(",");
+    const filter = "statecode eq 0";
+    const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
+
+    const url = `${dataverseConfig.baseUrl}/crdfd_kho_binh_dinhs?${query}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Accept": "application/json",
+                "Prefer": "odata.include-annotations=\"*\""
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Error fetching available Inventory:", await response.text());
+            return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+        }
+
+        const data = await response.json();
+        const items = data.value || [];
+        const totalCount = data['@odata.count'] || 0;
+
+        const mappedItems: InventoryItem[] = items.map((item: any) => ({
+            crdfd_kho_binh_dinhid: item.crdfd_kho_binh_dinhid,
+            _crdfd_tensanphamlookup_value: item._crdfd_tensanphamlookup_value,
+            productName: item['_crdfd_tensanphamlookup_value@OData.Community.Display.V1.FormattedValue'],
+            crdfd_masp: item.crdfd_masp,
+            crdfd_onvi: item.crdfd_onvi,
+            crdfd_tonkhothucte: item.crdfd_tonkhothucte,
+            crdfd_tonkholythuyet: item.crdfd_tonkholythuyet,
+            cr1bb_tonkholythuyetbomua: item.cr1bb_tonkholythuyetbomua,
+            _crdfd_vitrikho_value: item._crdfd_vitrikho_value,
+            warehouseLocationName: item['_crdfd_vitrikho_value@OData.Community.Display.V1.FormattedValue']
+        }));
+
+        return {
+            data: mappedItems,
+            totalCount: totalCount,
+            hasNextPage: (skip + pageSize) < totalCount,
+            hasPreviousPage: page > 1
+        };
+
+    } catch (e) {
+        console.error("Exception fetching Inventory:", e);
         return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
     }
 }

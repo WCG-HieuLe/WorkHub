@@ -920,7 +920,7 @@ export async function fetchDNTTRecords(
 ): Promise<DNTTRecord[]> {
     // Filter: statecode eq 0 (Active) AND Subject Lookup matches subjectId
     // Corrected lookup column: _cr1bb_oituong_value
-    let filter = `statecode eq 0 and _cr1bb_oituong_value eq ${subjectId}`;
+    let filter = `statecode eq 0 and (_cr1bb_oituong_value eq ${subjectId} or cr1bb_phongban eq 'Phòng Công nghệ')`;
 
     // Add date filter if year/month provided
     if (year !== undefined && month !== undefined) {
@@ -993,23 +993,7 @@ export interface TransactionSales {
     crdfd_onvitheokho?: string;
     crdfd_ngaygiaothucte?: string;
 
-    // Added properties for DataTrackerTable
-    crdfd_warehouse?: string;
-    warehouseName?: string;
-    crdfd_product?: string;
-    productName?: string;
-    crdfd_unit?: string;
-    crdfd_purchasingemployee?: string;
-    purchasingEmployeeName?: string;
-    crdfd_urgentpurchasingemployee?: string;
-    urgentPurchasingEmployeeName?: string;
-    crdfd_stockbyuser?: number;
-    crdfd_orderedstock?: number;
-    crdfd_strangestock?: number;
-    crdfd_warehousestrangestock?: number;
-    crdfd_historyconfidence?: number;
-    crdfd_confidencelevel?: string;
-    crdfd_stockstatus?: string;
+
 }
 
 export interface TransactionSalesPaginatedResponse {
@@ -1035,19 +1019,7 @@ export async function fetchTransactionSales(
         "crdfd_soluonggiaotheokho",
         "crdfd_onvitheokho",
         "crdfd_ngaygiaothucte",
-        // Extended columns
-        "_crdfd_warehouse_value",
-        "_crdfd_product_value",
-        "crdfd_unit",
-        "_crdfd_purchasingemployee_value",
-        "_crdfd_urgentpurchasingemployee_value",
-        "crdfd_stockbyuser",
-        "crdfd_orderedstock",
-        "crdfd_strangestock",
-        "crdfd_warehousestrangestock",
-        "crdfd_historyconfidence",
-        "crdfd_confidencelevel",
-        "crdfd_stockstatus"
+
     ];
 
     const select = columns.join(",");
@@ -1086,23 +1058,7 @@ export async function fetchTransactionSales(
             crdfd_onvitheokho: item.crdfd_onvitheokho,
             crdfd_ngaygiaothucte: item.crdfd_ngaygiaothucte,
 
-            // Map new fields
-            crdfd_warehouse: item['_crdfd_warehouse_value'],
-            warehouseName: item['_crdfd_warehouse_value@OData.Community.Display.V1.FormattedValue'],
-            crdfd_product: item['_crdfd_product_value'],
-            productName: item['_crdfd_product_value@OData.Community.Display.V1.FormattedValue'],
-            crdfd_unit: item.crdfd_unit,
-            crdfd_purchasingemployee: item['_crdfd_purchasingemployee_value'],
-            purchasingEmployeeName: item['_crdfd_purchasingemployee_value@OData.Community.Display.V1.FormattedValue'],
-            crdfd_urgentpurchasingemployee: item['_crdfd_urgentpurchasingemployee_value'],
-            urgentPurchasingEmployeeName: item['_crdfd_urgentpurchasingemployee_value@OData.Community.Display.V1.FormattedValue'],
-            crdfd_stockbyuser: item.crdfd_stockbyuser,
-            crdfd_orderedstock: item.crdfd_orderedstock,
-            crdfd_strangestock: item.crdfd_strangestock,
-            crdfd_warehousestrangestock: item.crdfd_warehousestrangestock,
-            crdfd_historyconfidence: item.crdfd_historyconfidence,
-            crdfd_confidencelevel: item['crdfd_confidencelevel@OData.Community.Display.V1.FormattedValue'] || item.crdfd_confidencelevel,
-            crdfd_stockstatus: item['crdfd_stockstatus@OData.Community.Display.V1.FormattedValue'] || item.crdfd_stockstatus
+
         }));
 
         return {

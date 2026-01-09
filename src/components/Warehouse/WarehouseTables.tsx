@@ -130,7 +130,7 @@ export const WarehouseTables: React.FC = () => {
             <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-header)] flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Transaction Sales</h2>
+                        <h2 className="text-[20px] font-bold text-[var(--text-primary)] tracking-tight">Transaction Sales</h2>
                         <p className="text-sm text-[var(--text-muted)] mt-1">
                             {loading ? 'Updating data...' : `${totalCount} records found`}
                         </p>
@@ -167,7 +167,7 @@ export const WarehouseTables: React.FC = () => {
                         <span>{error}</span>
                     </div>
                 ) : (
-                    <table className="w-full text-sm border-collapse min-w-[1200px]">
+                    <table className="w-full text-[14px] border-collapse min-w-[1200px]">
                         <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-sm ring-1 ring-black/5">
                             <tr className="border-b border-[var(--border)]">
                                 <th className="w-12 px-4 py-3 text-left bg-[var(--bg-card)]">

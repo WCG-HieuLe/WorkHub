@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useMsal } from '@azure/msal-react';
 import { fetchTransactionSales, getAccessToken, TransactionSales, TransactionSalesPaginatedResponse } from '../../services/dataverseService';
 
@@ -8,6 +8,7 @@ export const TransactionSalesTable: React.FC = () => {
     const [data, setData] = useState<TransactionSales[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -71,8 +72,30 @@ export const TransactionSalesTable: React.FC = () => {
         return new Date(dateString).toLocaleDateString('vi-VN');
     };
 
+    const filteredData = data.filter(item =>
+        (item.crdfd_maphieuxuat?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (item.crdfd_tensanphamtex?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (item.crdfd_idchitietonhang_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="h-full flex flex-col bg-[var(--bg-card)] rounded-xl overflow-hidden border border-[var(--border)] shadow-lg backdrop-blur-md">
+
+            {/* Header with Search */}
+            <div className="px-6 py-5 border-b border-[var(--border)] bg-[var(--bg-header)] flex items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-lg group">
+                    <input
+                        type="text"
+                        placeholder="Search by code, product name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full pl-4 pr-11 py-2.5 bg-[var(--bg-secondary)] border border-transparent rounded-full text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:bg-[var(--bg-card)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all shadow-sm hover:bg-[var(--bg-card-hover)]"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                        <Search className="text-[var(--text-muted)] group-focus-within:text-[var(--accent-primary)] transition-colors h-5 w-5" />
+                    </div>
+                </div>
+            </div>
 
             {/* Table Area */}
             <div className="flex-1 overflow-auto relative">
@@ -86,8 +109,8 @@ export const TransactionSalesTable: React.FC = () => {
                         <thead className="sticky top-0 bg-[var(--bg-card)] z-20 shadow-sm ring-1 ring-black/5">
                             <tr className="border-b border-[var(--border)]">
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Mã Phiếu Xuất</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Chi Tiết Đơn Hàng</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Tên Sản Phẩm</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider bg-[var(--bg-card)]">Chi Tiết Đơn Hàng</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider bg-[var(--bg-card)]">Tên Sản Phẩm</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">SL Giao (Kho)</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">ĐV Theo Kho</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Ngày Giao TT</th>
@@ -100,24 +123,24 @@ export const TransactionSalesTable: React.FC = () => {
                                         Loading data...
                                     </td>
                                 </tr>
-                            ) : data.length === 0 ? (
+                            ) : filteredData.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-[var(--text-muted)]">
                                         No transaction sales found.
                                     </td>
                                 </tr>
                             ) : (
-                                data.map((row) => (
+                                filteredData.map((row) => (
                                     <tr
                                         key={row.crdfd_transactionsalesid}
                                         className="group transition-colors hover:bg-[var(--bg-hover)]"
                                     >
-                                        <td className="px-4 py-3 text-[var(--accent-primary)] font-medium whitespace-nowrap hover:underline cursor-pointer">{row.crdfd_maphieuxuat}</td>
-                                        <td className="px-4 py-3 text-[var(--text-primary)] whitespace-nowrap">{row.crdfd_idchitietonhang_name}</td>
-                                        <td className="px-4 py-3 text-[var(--text-primary)] whitespace-nowrap max-w-[200px] truncate" title={row.crdfd_tensanphamtex}>{row.crdfd_tensanphamtex}</td>
-                                        <td className="px-4 py-3 text-[var(--text-primary)] text-right font-mono whitespace-nowrap">{row.crdfd_soluonggiaotheokho}</td>
-                                        <td className="px-4 py-3 text-[var(--text-secondary)] whitespace-nowrap">{row.crdfd_onvitheokho}</td>
-                                        <td className="px-4 py-3 text-[var(--text-secondary)] whitespace-nowrap">{formatDate(row.crdfd_ngaygiaothucte)}</td>
+                                        <td className="px-4 py-3 text-[var(--accent-primary)] font-medium whitespace-nowrap hover:underline cursor-pointer align-top">{row.crdfd_maphieuxuat}</td>
+                                        <td className="px-4 py-3 text-[var(--text-primary)] align-top">{row.crdfd_idchitietonhang_name}</td>
+                                        <td className="px-4 py-3 text-[var(--text-primary)] align-top">{row.crdfd_tensanphamtex}</td>
+                                        <td className="px-4 py-3 text-[var(--text-primary)] text-right font-mono whitespace-nowrap align-top">{row.crdfd_soluonggiaotheokho}</td>
+                                        <td className="px-4 py-3 text-[var(--text-secondary)] whitespace-nowrap align-top">{row.crdfd_onvitheokho}</td>
+                                        <td className="px-4 py-3 text-[var(--text-secondary)] whitespace-nowrap align-top">{formatDate(row.crdfd_ngaygiaothucte)}</td>
                                     </tr>
                                 ))
                             )}

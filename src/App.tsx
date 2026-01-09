@@ -11,6 +11,7 @@ import { Management } from './components/Management';
 import { Tools } from './components/Tools';
 import { DayDetail } from './components/DayDetail';
 import { WorkSummary } from './components/WorkSummary';
+import { TransactionSalesTable } from './components/Warehouse/TransactionSales';
 
 import { DayRecord, MonthSummary } from './types/types';
 import { calculateMonthSummary } from './utils/workUtils';
@@ -23,7 +24,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -136,11 +137,12 @@ function App() {
 
     const getHeaderTitle = () => {
         switch (currentViewState) {
-            case 'personal': return 'WorkHub - Bảng chấm công';
-            case 'team': return 'WorkHub - Phê duyệt điều chỉnh';
-            case 'audit': return 'WorkHub - Lịch sử thay đổi';
-            case 'management': return 'WorkHub - Admin Page';
-            case 'tools': return 'WorkHub - Công cụ hỗ trợ';
+            case 'personal': return 'TimeSheet';
+            case 'team': return 'Adjustment Request';
+            case 'audit': return 'Change History';
+            case 'management': return 'Admin Page';
+            case 'tools': return 'Tools';
+            case 'warehouse': return 'Transaction Sale';
             default: return 'WorkHub';
         }
     };
@@ -151,6 +153,10 @@ function App() {
                 <Sidebar
                     currentView={currentViewState}
                     onChangeView={setCurrentViewState}
+                    user={accounts[0] || null}
+                    isAuthenticated={isAuthenticated}
+                    onLogin={handleLogin}
+                    onLogout={handleLogout}
                 />
 
                 <div className="main-layout">
@@ -159,11 +165,7 @@ function App() {
                         month={month}
                         onMonthChange={handleMonthChange}
                         title={getHeaderTitle()}
-                        showDateNav={true}
-                        user={accounts[0] || null}
-                        isAuthenticated={isAuthenticated}
-                        onLogin={handleLogin}
-                        onLogout={handleLogout}
+                        showDateNav={currentViewState === 'personal' || currentViewState === 'team'}
                     />
 
                     {currentViewState === 'personal' ? (
@@ -230,6 +232,10 @@ function App() {
                     ) : currentViewState === 'tools' ? (
                         <div className="main-content">
                             <Tools />
+                        </div>
+                    ) : currentViewState === 'warehouse' ? (
+                        <div className="main-content">
+                            <TransactionSalesTable />
                         </div>
                     ) : (
                         <div className="main-content">

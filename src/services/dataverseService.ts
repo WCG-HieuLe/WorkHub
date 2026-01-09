@@ -978,3 +978,93 @@ export async function fetchDNTTRecords(
         return [];
     }
 }
+
+// ==========================================
+// TRANSACTION SALES SERVICES
+// ==========================================
+
+export interface TransactionSales {
+    crdfd_transactionsalesid: string;
+    crdfd_maphieuxuat?: string;
+    _crdfd_idchitietonhang_value?: string;
+    crdfd_idchitietonhang_name?: string;
+    crdfd_tensanphamtex?: string;
+    crdfd_soluonggiaotheokho?: number;
+    crdfd_onvitheokho?: string;
+    crdfd_ngaygiaothucte?: string;
+}
+
+export interface TransactionSalesPaginatedResponse {
+    data: TransactionSales[];
+    totalCount: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
+export async function fetchTransactionSales(
+    accessToken: string,
+    page: number = 1,
+    pageSize: number = 50
+): Promise<TransactionSalesPaginatedResponse> {
+    const skip = (page - 1) * pageSize;
+
+    // Select columns
+    const columns = [
+        "crdfd_transactionsalesid",
+        "crdfd_maphieuxuat",
+        "_crdfd_idchitietonhang_value",
+        "crdfd_tensanphamtex",
+        "crdfd_soluonggiaotheokho",
+        "crdfd_onvitheokho",
+        "crdfd_ngaygiaothucte"
+    ];
+
+    const select = columns.join(",");
+    const filter = "statecode eq 0";
+    const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
+
+    const url = `${dataverseConfig.baseUrl}/crdfd_transactionsaleses?${query}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Accept": "application/json",
+                "Prefer": "odata.include-annotations=\"*\""
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Error fetching available Transaction Sales:", await response.text());
+            return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+        }
+
+        const data = await response.json();
+        const items = data.value || [];
+        const totalCount = data['@odata.count'] || 0;
+
+        const mappedItems: TransactionSales[] = items.map((item: any) => ({
+            crdfd_transactionsalesid: item.crdfd_transactionsalesid,
+            crdfd_maphieuxuat: item.crdfd_maphieuxuat,
+            _crdfd_idchitietonhang_value: item._crdfd_idchitietonhang_value,
+            crdfd_idchitietonhang_name: item['_crdfd_idchitietonhang_value@OData.Community.Display.V1.FormattedValue'],
+            crdfd_tensanphamtex: item.crdfd_tensanphamtex,
+            crdfd_soluonggiaotheokho: item.crdfd_soluonggiaotheokho,
+            crdfd_onvitheokho: item.crdfd_onvitheokho,
+            crdfd_ngaygiaothucte: item.crdfd_ngaygiaothucte
+        }));
+
+        return {
+            data: mappedItems,
+            totalCount: totalCount,
+            hasNextPage: (skip + pageSize) < totalCount,
+            hasPreviousPage: page > 1
+        };
+
+    } catch (e) {
+        console.error("Exception fetching Transaction Sales:", e);
+        return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+    }
+}

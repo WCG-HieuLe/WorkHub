@@ -1000,8 +1000,23 @@ export interface TransactionSales {
     crdfd_soluonggiaotheokho?: number;
     crdfd_onvitheokho?: string;
     crdfd_ngaygiaothucte?: string;
-
-
+    // Added fields
+    crdfd_warehouse?: string;
+    warehouseName?: string;
+    crdfd_product?: string;
+    productName?: string;
+    crdfd_unit?: string;
+    crdfd_purchasingemployee?: string;
+    purchasingEmployeeName?: string;
+    crdfd_urgentpurchasingemployee?: string;
+    urgentPurchasingEmployeeName?: string;
+    crdfd_stockbyuser?: number;
+    crdfd_orderedstock?: number;
+    crdfd_strangestock?: number;
+    crdfd_warehousestrangestock?: number;
+    crdfd_historyconfidence?: number;
+    crdfd_confidencelevel?: string;
+    crdfd_stockstatus?: string;
 }
 
 export interface TransactionSalesPaginatedResponse {
@@ -1027,7 +1042,19 @@ export async function fetchTransactionSales(
         "crdfd_soluonggiaotheokho",
         "crdfd_onvitheokho",
         "crdfd_ngaygiaothucte",
-
+        // Extended columns
+        "crdfd_warehouse",
+        "crdfd_product",
+        "crdfd_unit",
+        "crdfd_purchasingemployee",
+        "crdfd_urgentpurchasingemployee",
+        "crdfd_stockbyuser",
+        "crdfd_orderedstock",
+        "crdfd_strangestock",
+        "crdfd_warehousestrangestock",
+        "crdfd_historyconfidence",
+        "crdfd_confidencelevel",
+        "crdfd_stockstatus"
     ];
 
     const select = columns.join(",");
@@ -1066,7 +1093,22 @@ export async function fetchTransactionSales(
             crdfd_onvitheokho: item.crdfd_onvitheokho,
             crdfd_ngaygiaothucte: item.crdfd_ngaygiaothucte,
 
-
+            crdfd_stockbyuser: item.crdfd_stockbyuser,
+            crdfd_orderedstock: item.crdfd_orderedstock,
+            crdfd_strangestock: item.crdfd_strangestock,
+            crdfd_warehousestrangestock: item.crdfd_warehousestrangestock,
+            crdfd_historyconfidence: item.crdfd_historyconfidence,
+            crdfd_confidencelevel: item.crdfd_confidencelevel,
+            crdfd_stockstatus: item.crdfd_stockstatus,
+            crdfd_warehouse: item.crdfd_warehouse,
+            // warehouseName: item['_crdfd_warehouse_value@OData.Community.Display.V1.FormattedValue'], // Assuming lookup if needed
+            crdfd_product: item.crdfd_product,
+            // productName: item['_crdfd_product_value@OData.Community.Display.V1.FormattedValue'],
+            crdfd_unit: item.crdfd_unit,
+            crdfd_purchasingemployee: item.crdfd_purchasingemployee,
+            // purchasingEmployeeName: item['_crdfd_purchasingemployee_value@OData.Community.Display.V1.FormattedValue'],
+            crdfd_urgentpurchasingemployee: item.crdfd_urgentpurchasingemployee,
+            // urgentPurchasingEmployeeName: item['_crdfd_urgentpurchasingemployee_value@OData.Community.Display.V1.FormattedValue'],
         }));
 
         return {

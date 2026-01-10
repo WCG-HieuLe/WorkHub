@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search, Box } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useMsal } from '@azure/msal-react';
 import { fetchInventory, getAccessToken, InventoryItem, InventoryPaginatedResponse } from '../../services/dataverseService';
 

@@ -18,13 +18,20 @@ const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}
 
 const CRM_BASE_URL = 'https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&pagetype=entityrecord&etn=crdfd_bangchamconghangngay&id=';
 
-// Helper to parse date string "DD/MM/YYYY : HH:mm:ss" to timestamp
+// Helper to parse date string "DD/MM/YYYY : HH:mm:ss" or "DD/MM/YYYY HH:mm:ss" to timestamp
 function parseDateLog(dateStr: string): number {
     if (!dateStr) return 0;
     try {
-        const parts = dateStr.split(' : ');
+        // Try splitting by " : " first (legacy/original format)
+        let parts = dateStr.includes(' : ') ? dateStr.split(' : ') : dateStr.split(' ');
+
+        // If split by space yielded more than 2 parts (e.g. DD/MM/YYYY HH:mm:ss AM/PM or multiple spaces), 
+        // we assume the first part is date and second is time. 
+        // But for exact format "02/01/2026 04:28:00", split(' ') gives ["02/01/2026", "04:28:00"] which is correct.
+
+        // Fallback for cases where it didn't split well or just date
         const datePart = parts[0];
-        const timePart = parts[1] || '00:00:00';
+        const timePart = parts.length > 1 ? parts[1] : '00:00:00';
 
         const [day, month, year] = datePart.split('/').map(Number);
         const [hours, minutes, seconds] = timePart.split(':').map(Number);

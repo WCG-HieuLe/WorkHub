@@ -24,7 +24,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-inventory' | 'warehouse-flow'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -143,7 +143,6 @@ function App() {
             case 'management': return 'Admin Page';
             case 'tools': return 'Tools';
             case 'warehouse-tables': return 'Warehouse Tables';
-            case 'warehouse-inventory': return 'Inventory Check';
             case 'warehouse-flow': return 'Flow Monitor';
             case 'warehouse': return 'Warehouse';
             default: return 'WorkHub';
@@ -236,12 +235,11 @@ function App() {
                         <div className="main-content">
                             <Tools />
                         </div>
-                    ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-inventory' || currentViewState === 'warehouse-flow' ? (
+                    ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-flow' ? (
                         <div className="main-content">
                             <WarehouseLayout activeView={
                                 currentViewState === 'warehouse-tables' ? 'tables' :
-                                    currentViewState === 'warehouse-inventory' ? 'inventory' :
-                                        currentViewState === 'warehouse-flow' ? 'flow' : undefined
+                                    currentViewState === 'warehouse-flow' ? 'flow' : undefined
                             } />
                         </div>
                     ) : (

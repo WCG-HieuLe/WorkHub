@@ -7,7 +7,7 @@ import { Save } from 'lucide-react';
 interface LeaveDetailModalProps {
     registration: TeamRegistration;
     onClose: () => void;
-    onUpdateSuccess: () => void;
+    onUpdateSuccess: (updatedRegistration: TeamRegistration) => void;
 }
 
 export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({ registration, onClose, onUpdateSuccess }) => {
@@ -55,12 +55,23 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({ registration
                 reason: editData.reason,
                 quanLyTructiep: editData.quanLyTructiep,
                 capTrenDuyet: Number(editData.capTrenDuyet),
-                hinhThuc: editData.hinhThuc,
+                hinhThuc: editData.hinhThuc ? Number(editData.hinhThuc) : undefined,
                 soNgay: Number(editData.soNgay)
             });
 
             if (success) {
-                onUpdateSuccess();
+                onUpdateSuccess({
+                    ...registration,
+                    crdfd_loaiangky: editData.type,
+                    crdfd_tungay: editData.startDate,
+                    crdfd_enngay: editData.endDate,
+                    crdfd_sogio2: Number(editData.hours),
+                    crdfd_diengiai: editData.reason,
+                    crdfd_quanlytructiep: editData.quanLyTructiep,
+                    crdfd_captrenduyet: Number(editData.capTrenDuyet),
+                    crdfd_hinhthuc: editData.hinhThuc ? Number(editData.hinhThuc) : undefined,
+                    cr1bb_songay: Number(editData.soNgay)
+                });
                 onClose();
             } else {
                 alert("Có lỗi xảy ra khi cập nhật!");

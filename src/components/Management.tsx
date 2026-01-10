@@ -28,10 +28,22 @@ const adminGroups: AdminGroup[] = [
         ),
         links: [
             {
+                emoji: '⚡',
+                title: 'Power Platform Admin',
+                url: 'https://admin.powerplatform.microsoft.com/home',
+                description: 'Quản trị Power Platform, Environments, và Solutions.'
+            },
+            {
                 emoji: '💼',
                 title: 'Business Management',
                 url: 'https://wecare-ii.crm5.dynamics.com/main.aspx?settingsonly=true#438100364',
                 description: 'Cấu hình hệ thống và quản lý dữ liệu Dynamics 365.'
+            },
+            {
+                emoji: '🏢',
+                title: '365 Admin',
+                url: 'https://admin.cloud.microsoft/?#/homepage',
+                description: 'Trung tâm quản trị tổng thể dịch vụ Microsoft 365.'
             },
             {
                 emoji: '🤖',
@@ -50,12 +62,6 @@ const adminGroups: AdminGroup[] = [
                 title: 'Graph Explorer',
                 url: 'https://developer.microsoft.com/en-us/graph/graph-explorer',
                 description: 'Công cụ thử nghiệm và tra cứu Microsoft Graph API.'
-            },
-            {
-                emoji: '🏢',
-                title: 'MS 365 Admin',
-                url: 'https://admin.cloud.microsoft/?#/homepage',
-                description: 'Trung tâm quản trị tổng thể dịch vụ Microsoft 365.'
             },
             {
                 emoji: '🔑',
@@ -86,12 +92,6 @@ const adminGroups: AdminGroup[] = [
                 title: 'Power BI Admin',
                 url: 'https://app.powerbi.com/admin-portal/tenantSettings?experience=fabric-developer&clientSideAuth=0',
                 description: 'Quản trị báo cáo, dataset và thiết lập Power BI / Fabric.'
-            },
-            {
-                emoji: '⚡',
-                title: 'Power Platform Admin',
-                url: 'https://admin.powerplatform.microsoft.com/home',
-                description: 'Quản trị Power Platform, Environments, và Solutions.'
             },
             {
                 emoji: '📂',

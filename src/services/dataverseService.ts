@@ -73,7 +73,7 @@ interface PhieuDangKy {
     crdfd_sogio2?: number;
     crdfd_diengiai?: string;
     crdfd_captrenduyet?: number; // OptionSet: ApprovalStatus
-    crdfd_hinhthuc?: string;     // Text
+    crdfd_hinhthuc?: number;     // OptionSet Value (Int32)
     crdfd_quanlytructiep?: string; // Text
     cr1bb_songay?: number;       // Number
     cr1bb_sopheptonnamtruoc?: number; // Number
@@ -764,7 +764,7 @@ export async function updatePhieuDangKy(
         reason?: string;
         quanLyTructiep?: string;
         capTrenDuyet?: number;
-        hinhThuc?: string;
+        hinhThuc?: number;
         soNgay?: number;
     }
 ): Promise<boolean> {
@@ -774,12 +774,19 @@ export async function updatePhieuDangKy(
     if (data.type !== undefined) payload.crdfd_loaiangky = data.type;
     if (data.startDate !== undefined) payload.crdfd_tungay = data.startDate;
     if (data.endDate !== undefined) payload.crdfd_enngay = data.endDate;
-    if (data.hours !== undefined) payload.crdfd_sogio2 = data.hours;
+    if (data.hours !== undefined && data.hours !== null) payload.crdfd_sogio2 = data.hours;
     if (data.reason !== undefined) payload.crdfd_diengiai = data.reason;
     if (data.quanLyTructiep !== undefined) payload.crdfd_quanlytructiep = data.quanLyTructiep;
     if (data.capTrenDuyet !== undefined) payload.crdfd_captrenduyet = data.capTrenDuyet;
-    if (data.hinhThuc !== undefined) payload.crdfd_hinhthuc = data.hinhThuc;
-    if (data.soNgay !== undefined) payload.cr1bb_songay = data.soNgay;
+
+    // Validate hinhThuc is number before adding (it's an OptionSet)
+    if (data.hinhThuc !== undefined && typeof data.hinhThuc === 'number' && !isNaN(data.hinhThuc)) {
+        payload.crdfd_hinhthuc = data.hinhThuc;
+    }
+
+    if (data.soNgay !== undefined && data.soNgay !== null) payload.cr1bb_songay = data.soNgay;
+
+    console.log("Updating Registration Payload:", JSON.stringify(payload));
 
     try {
         const response = await fetch(url, {
@@ -794,10 +801,11 @@ export async function updatePhieuDangKy(
             body: JSON.stringify(payload)
         });
 
-        if (response.ok) {
+        if (response.ok || response.status === 204) {
             return true;
         } else {
-            console.error("Error updating registration:", response.status, await response.text());
+            const errorText = await response.text();
+            console.error("Error updating registration:", response.status, errorText);
             return false;
         }
     } catch (e) {

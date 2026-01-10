@@ -271,7 +271,13 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                     <LeaveDetailModal
                         registration={selectedItem as TeamRegistration}
                         onClose={closeModal}
-                        onUpdateSuccess={() => {
+                        onUpdateSuccess={(updatedItem) => {
+                            // Optimistic update
+                            setRegistrations(prev => prev.map(item =>
+                                item.crdfd_phieuangkyid === updatedItem.crdfd_phieuangkyid ? updatedItem : item
+                            ));
+
+                            // Background refresh to ensure data consistency
                             loadData();
                             closeModal();
                         }}

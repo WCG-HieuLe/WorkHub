@@ -1029,7 +1029,8 @@ export interface TransactionSalesPaginatedResponse {
 export async function fetchTransactionSales(
     accessToken: string,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
+    searchText?: string
 ): Promise<TransactionSalesPaginatedResponse> {
     const skip = (page - 1) * pageSize;
 
@@ -1058,7 +1059,12 @@ export async function fetchTransactionSales(
     ];
 
     const select = columns.join(",");
-    const filter = "statecode eq 0";
+    let filter = "statecode eq 0";
+
+    if (searchText) {
+        filter += ` and (contains(crdfd_tensanphamtex, '${searchText}') or contains(crdfd_maphieuxuat, '${searchText}'))`;
+    }
+
     const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
 
     const url = `${dataverseConfig.baseUrl}/crdfd_transactionsales?${query}`;
@@ -1125,6 +1131,105 @@ export async function fetchTransactionSales(
 }
 
 // ==========================================
+// TRANSACTION BUY SERVICES
+// ==========================================
+
+export interface TransactionBuy {
+    crdfd_transactionbuyid: string;
+    crdfd_name?: string; // Mã phiếu mua/nhập
+    crdfd_masp?: string;
+    crdfd_tensanpham?: string; // Or similar to sales
+    crdfd_soluong?: number;
+    createdon?: string;
+}
+
+export interface TransactionBuyPaginatedResponse {
+    data: TransactionBuy[];
+    totalCount: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
+export async function fetchTransactionBuys(
+    accessToken: string,
+    page: number = 1,
+    pageSize: number = 50,
+    searchText?: string
+): Promise<TransactionBuyPaginatedResponse> {
+    const skip = (page - 1) * pageSize;
+
+    // Guessing columns based on common patterns. 
+    // If these are wrong, we might need to adjust after first run error.
+    const columns = [
+        "crdfd_transactionbuyid",
+        "crdfd_name",
+        "crdfd_masp",
+        "crdfd_tensanpham",
+        "crdfd_soluong",
+        "createdon"
+    ];
+
+    const select = columns.join(",");
+    let filter = "statecode eq 0";
+
+    if (searchText) {
+        filter += ` and (contains(crdfd_tensanpham, '${searchText}') or contains(crdfd_masp, '${searchText}'))`;
+    }
+
+    const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
+
+    // Note: Table name from TableGallery is 'crdfd_transactionbuy' (singular)
+    // But usually APIs are plural. 'crdfd_transactionbuys'?
+    // TableGallery url says: etn=crdfd_transactionbuy. 
+    // Standard OData set name is usually pluralized. 
+    // Let's try 'crdfd_transactionbuys'. If 404, we try singular.
+    const url = `${dataverseConfig.baseUrl}/crdfd_transactionbuys?${query}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Accept": "application/json",
+                "Prefer": "odata.include-annotations=\"*\""
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Error fetching Transaction Buys:", await response.text());
+            return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+        }
+
+        const data = await response.json();
+        const items = data.value || [];
+        const totalCount = data['@odata.count'] || 0;
+
+        const mappedItems: TransactionBuy[] = items.map((item: any) => ({
+            crdfd_transactionbuyid: item.crdfd_transactionbuyid,
+            crdfd_name: item.crdfd_name,
+            crdfd_masp: item.crdfd_masp,
+            crdfd_tensanpham: item.crdfd_tensanpham,
+            // Check if quantity is different column name
+            crdfd_soluong: item.crdfd_soluong,
+            createdon: item.createdon
+        }));
+
+        return {
+            data: mappedItems,
+            totalCount: totalCount,
+            hasNextPage: (skip + pageSize) < totalCount,
+            hasPreviousPage: page > 1
+        };
+
+    } catch (e) {
+        console.error("Exception fetching Transaction Buys:", e);
+        return { data: [], totalCount: 0, hasNextPage: false, hasPreviousPage: false };
+    }
+}
+
+
+// ==========================================
 // INVENTORY SERVICES
 // ==========================================
 
@@ -1151,7 +1256,10 @@ export interface InventoryPaginatedResponse {
 export async function fetchInventory(
     accessToken: string,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
+    searchText?: string,
+    locationFilter?: string,
+    diffOnly?: boolean
 ): Promise<InventoryPaginatedResponse> {
     const skip = (page - 1) * pageSize;
 
@@ -1168,7 +1276,25 @@ export async function fetchInventory(
     ];
 
     const select = columns.join(",");
-    const filter = "statecode eq 0";
+    let filter = "statecode eq 0";
+
+    if (searchText) {
+        // Search by Product Code (crdfd_masp) AND Product Name (via lookup)
+        // We assume the navigation property is 'crdfd_tensanphamlookup' and the name field on product is 'crdfd_name'
+        filter += ` and (contains(crdfd_masp, '${searchText}') or contains(crdfd_tensanphamlookup/crdfd_name, '${searchText}'))`;
+    }
+
+    if (locationFilter) {
+        // Filter by Location name
+        // Assuming navigation property 'crdfd_vitrikho' and name column 'crdfd_name'
+        filter += ` and contains(crdfd_vitrikho/crdfd_name, '${locationFilter}')`;
+    }
+
+    if (diffOnly) {
+        // Filter where Actual != Theoretical
+        filter += ` and crdfd_tonkhothucte ne crdfd_tonkholythuyet`;
+    }
+
     const query = `$filter=${encodeURIComponent(filter)}&$select=${select}&$top=${pageSize}&$count=true&$orderby=createdon desc`;
 
     const url = `${dataverseConfig.baseUrl}/crdfd_kho_binh_dinhs?${query}`;

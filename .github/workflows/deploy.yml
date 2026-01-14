@@ -37,6 +37,9 @@ jobs:
           VITE_CLIENT_ID: ${{ secrets.VITE_CLIENT_ID }}
           VITE_AUTHORITY: ${{ secrets.VITE_AUTHORITY }}
 
+      - name: Create .nojekyll to bypass Jekyll processing
+        run: touch ./dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

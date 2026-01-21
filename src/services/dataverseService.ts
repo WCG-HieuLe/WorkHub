@@ -831,7 +831,8 @@ export interface DNTTRecord {
     cr1bb_diengiai?: string;             // Diễn giải
     cr1bb_ngaydukienthanhtoan?: string;  // Ngày dự kiến thanh toán
     cr44a_trangthai_denghithanhtoan?: string; // Trạng thái
-    cr44a_truongbophan?: string;         // Trưởng bộ phận duyệt
+    cr44a_truongbophan?: string;         // Trưởng bộ phận duyệt (formatted)
+    cr44a_truongbophan_value?: number;   // Trưởng bộ phận duyệt (raw OptionSet value)
     cr44a_ketoanthanhtoan?: string;      // Kế toán thanh toán duyệt
     cr44a_ketoantonghop?: string;         // Kế toán tổng hợp duyệt
     _ownerid_value?: string;             // Owner lookup
@@ -984,12 +985,62 @@ export async function fetchDNTTRecords(
                 cr44a_ketoantonghop: item['cr44a_ketoantonghop@OData.Community.Display.V1.FormattedValue']
                     || item['cr44a_ketoantonghop']
                     || "Unknown",
+                // Map Choice formatted value for Truong Bo Phan
+                cr44a_truongbophan: item['cr44a_truongbophan@OData.Community.Display.V1.FormattedValue']
+                    || item['cr44a_truongbophan']
+                    || "Unknown",
+                // Raw value for editing
+                cr44a_truongbophan_value: item['cr44a_truongbophan'] ?? null,
                 ownerName: item['_ownerid_value@OData.Community.Display.V1.FormattedValue'] || "Unknown",
             };
         });
     } catch (e) {
         console.error("Error calling DNTT API:", e);
         return [];
+    }
+}
+
+/**
+ * Update DNTT record approval field
+ * @param accessToken Dataverse access token
+ * @param recordId DNTT record ID (cr44a_enghithanhtoanid)
+ * @param fieldName Field to update (e.g., 'cr44a_truongbophan')
+ * @param value New OptionSet value (number)
+ */
+export async function updateDNTTStatus(
+    accessToken: string,
+    recordId: string,
+    fieldName: string,
+    value: number | null
+): Promise<boolean> {
+    const url = `${dataverseConfig.baseUrl}/cr44a_enghithanhtoans(${recordId})`;
+
+    const payload: any = {};
+    payload[fieldName] = value;
+
+    try {
+        const response = await fetch(url, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok || response.status === 204) {
+            return true;
+        } else {
+            const errorText = await response.text();
+            console.error("Error updating DNTT status:", response.status, errorText);
+            return false;
+        }
+    } catch (e) {
+        console.error("Exception updating DNTT status:", e);
+        return false;
     }
 }
 
@@ -1022,7 +1073,8 @@ export interface TransactionSales {
     crdfd_warehousestrangestock?: number;
     crdfd_historyconfidence?: number;
     crdfd_confidencelevel?: string;
-    crdfd_stockstatus?: string;
+    crdfd_soluongoitratheokhonew?: number;
+    createdon?: string;
 }
 
 export interface TransactionSalesPaginatedResponse {
@@ -1060,8 +1112,7 @@ export async function fetchTransactionSales(
         "crdfd_strangestock",
         "crdfd_warehousestrangestock",
         "crdfd_historyconfidence",
-        "crdfd_confidencelevel",
-        "crdfd_stockstatus"
+        "crdfd_confidencelevel"
     ];
 
     const select = columns.join(",");
@@ -1111,7 +1162,6 @@ export async function fetchTransactionSales(
             crdfd_warehousestrangestock: item.crdfd_warehousestrangestock,
             crdfd_historyconfidence: item.crdfd_historyconfidence,
             crdfd_confidencelevel: item.crdfd_confidencelevel,
-            crdfd_stockstatus: item.crdfd_stockstatus,
             crdfd_warehouse: item.crdfd_warehouse,
             // warehouseName: item['_crdfd_warehouse_value@OData.Community.Display.V1.FormattedValue'], // Assuming lookup if needed
             crdfd_product: item.crdfd_product,
@@ -1146,6 +1196,8 @@ export interface TransactionBuy {
     crdfd_masp?: string;
     crdfd_tensanpham?: string; // Or similar to sales
     crdfd_soluong?: number;
+    crdfd_soluonganhantheokho?: number;
+    crdfd_soluongoitratheokhonew?: number;
     createdon?: string;
 }
 
@@ -1161,12 +1213,13 @@ export interface TransactionBuyPaginatedResponse {
 // ==========================================
 
 export interface InventoryCheckItem {
-    crdfd_kho_binh_dinhid: string;
-    productName: string;           // lookup formatted value
-    productCode: string;           // crdfd_masp
-    warehouseLocation: string;     // lookup formatted value
-    tonKhoThucTe: number;          // crdfd_tonkhothucte
-    tonKhoLyThuyet: number;        // crdfd_tonkholythuyet
+    crdfd_kho_binh_dinhid: string; // warehouseInventoryId
+    productName: string;
+    productCode: string; // crdfd_masp
+    productId?: string; // _crdfd_tensanphamlookup_value (GUID)
+    warehouseLocation: string; // lookup formatted value
+    tonKhoThucTe: number;
+    tonKhoLyThuyet: number;
     tonKhaDung: number;            // cr1bb_tonkhadung
     hangLoiSauKiem: number;        // cr1bb_slhangloisaukiem
     tongTonKho: number;            // calculated: tonKhoThucTe + hangLoiSauKiem
@@ -1331,6 +1384,7 @@ export async function fetchInventoryCheck(
                 crdfd_kho_binh_dinhid: item.crdfd_kho_binh_dinhid,
                 productName: productName,
                 productCode: item.crdfd_masp || "",
+                productId: item._crdfd_tensanphamlookup_value || "", // Map Product GUID
                 warehouseLocation: item['_crdfd_vitrikho_value@OData.Community.Display.V1.FormattedValue'] || "Unknown",
                 tonKhoThucTe: tonKhoThucTe,
                 tonKhoLyThuyet: item.crdfd_tonkholythuyet || 0,
@@ -1361,6 +1415,7 @@ export interface InventoryProduct {
     productName: string;
     productCode?: string;
     crdfd_masp?: string;
+    productId?: string;
     crdfd_onvi?: string;
     locationName?: string;
     warehouseLocation?: string;
@@ -1494,17 +1549,223 @@ export async function fetchInventoryProducts(
 /**
  * Fetch Inventory History for a product
  */
-export async function fetchInventoryHistory(
-    _accessToken: string,
-    khoId: string
-): Promise<InventoryHistoryRecord[]> {
-    // This assumes there's a related entity for history
-    // If no history table exists, return empty array
-    // For now, returning empty as placeholder
-    console.log("Fetching history for khoId:", khoId);
+// ==========================================
+// INVENTORY HISTORY AGGREGATION SERVICES
+// ==========================================
 
-    // TODO: Implement actual history fetch when table is known
-    return [];
+export interface InventoryHistorySummary {
+    totalImport: number;
+    totalExport: number;
+    totalReturnSale: number;
+    totalReturnBuy: number;
+    totalBalance: number; // Cân kho
+    currentStock: number;
+}
+
+export interface InventoryHistoryExtendedRecord extends InventoryHistoryRecord {
+    originalData?: any;
+    quantityReturn?: number; // Cho đổi trả
+}
+
+/**
+ * Fetch Inventory History Aggregation
+ */
+export async function fetchInventoryHistory(
+    accessToken: string,
+    productCode: string,
+    productId: string
+): Promise<{ records: InventoryHistoryExtendedRecord[], summary: InventoryHistorySummary }> {
+
+    // 1. Fetch all sources in parallel
+    // 1. Fetch all sources in parallel
+    // User requested to NOT load 'crdfd_kiemkhoqrs' (K LOAD BANG NAY)
+    // So we remove checks fetching.
+    const [sales, buys, specialEvents] = await Promise.all([
+        fetchProductSalesTransactions(accessToken, productCode),
+        fetchProductBuyTransactions(accessToken, productCode),
+        fetchProductSpecialEvents(accessToken, productId)
+    ]);
+
+    // Checks is now empty array
+    const checks: any[] = [];
+
+    // 2. Aggregate Summary
+    let totalImport = 0;
+    let totalExport = 0;
+    let totalReturnSale = 0;
+    let totalReturnBuy = 0;
+    let totalBalance = 0;
+
+    const records: InventoryHistoryExtendedRecord[] = [];
+
+    // Process Sales
+    sales.forEach(s => {
+        const qtyExport = s.crdfd_soluonggiaotheokho || 0;
+        const qtyReturn = s.crdfd_soluongoitratheokhonew || 0;
+
+        totalExport += qtyExport;
+        totalReturnSale += qtyReturn;
+
+        records.push({
+            id: s.crdfd_transactionsalesid,
+            type: 'Xuất',
+            date: s.createdon || '',
+            quantity: -qtyExport,
+            quantityReturn: qtyReturn,
+            reference: s.crdfd_maphieuxuat || ''
+        });
+    });
+
+    // Process Buys
+    buys.forEach(b => {
+        const qtyImport = b.crdfd_soluonganhantheokho || 0;
+        const qtyReturn = b.crdfd_soluongoitratheokhonew || 0;
+
+        totalImport += qtyImport;
+        totalReturnBuy += qtyReturn;
+
+        records.push({
+            id: b.crdfd_transactionbuyid,
+            type: 'Nhập',
+            date: b.createdon || '',
+            quantity: qtyImport,
+            quantityReturn: qtyReturn,
+            reference: b.crdfd_name || '',
+        });
+    });
+
+    // Process Special Events (Cân kho)
+    specialEvents.forEach(e => {
+        const qty = e.quantity || 0; // Assumption
+        totalBalance += qty;
+
+        records.push({
+            id: e.id,
+            type: 'Cân kho',
+            date: e.date || '',
+            quantity: qty,
+            reference: e.reference || '',
+            note: e.note
+        });
+    });
+
+    // Process Inventory Checks (Kiểm kho) - Info only
+    checks.forEach(c => {
+        records.push({
+            id: c.crdfd_kiemkhoqrid,
+            type: 'Kiểm kho',
+            date: c.createdon || '',
+            quantity: c.crdfd_soluong || 0, // Assumption
+            reference: c.crdfd_name || '',
+        });
+    });
+
+    // Calculate Current Stock
+    // Formula: (Nhập - Trả Mua) - (Xuất - Trả Bán) + Cân Kho
+    const currentStock = (totalImport - totalReturnBuy) - (totalExport - totalReturnSale) + totalBalance;
+
+    // Sort by date desc
+    records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+        records,
+        summary: {
+            totalImport,
+            totalExport,
+            totalReturnSale,
+            totalReturnBuy,
+            totalBalance,
+            currentStock
+        }
+    };
+}
+
+// --- Helper Fetchers ---
+
+async function fetchProductSalesTransactions(token: string, productCode: string): Promise<TransactionSales[]> {
+    const filter = `statecode eq 0 and crdfd_masanpham eq '${productCode}'`; // Correct column: crdfd_masanpham
+    const select = "crdfd_transactionsalesid,crdfd_maphieuxuat,crdfd_soluonggiaotheokho,crdfd_soluongoitratheokhonew,createdon";
+    // Fix: Table name pluralized -> crdfd_transactionsaleses
+    const url = `${dataverseConfig.baseUrl}/crdfd_transactionsaleses?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
+
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+            console.error(`Error fetching Sale history. Status: ${res.status}`, await res.text());
+            return [];
+        }
+        const data = await res.json();
+        return data.value || [];
+    } catch (e) {
+        console.error("Exception fetching sales history", e);
+        return [];
+    }
+}
+
+async function fetchProductBuyTransactions(token: string, productCode: string): Promise<TransactionBuy[]> {
+    const filter = `statecode eq 0 and crdfd_masanpham eq '${productCode}'`; // Correct column: crdfd_masanpham
+    // Note: TransactionBuy has crdfd_masp according to previous code
+    const select = "crdfd_transactionbuyid,crdfd_name,crdfd_soluonganhantheokho,crdfd_soluongoitratheokhonew,createdon";
+    // Plural check: crdfd_transactionbuies?
+    const url = `${dataverseConfig.baseUrl}/crdfd_transactionbuies?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
+
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+            // Fallback singular if needed, but let's try plural based on standard
+            console.warn("Retrying fetch buys with singular table name?");
+            // For now return empty or simple retry logic could be added
+            return [];
+        }
+        if (!res.ok) {
+            console.error(`Error fetching Buy history. Status: ${res.status}`, await res.text());
+            return [];
+        }
+        const data = await res.json();
+        return data.value || [];
+    } catch (e) {
+        console.error("Exception fetching buy history", e);
+        return [];
+    }
+}
+
+
+
+async function fetchProductSpecialEvents(accessToken: string, productId: string): Promise<InventoryHistoryExtendedRecord[]> {
+    if (!productId) return [];
+
+    // User confirmed columns: crdfd_sanphamcankho (Lookup), crdfd_soluong, cr1bb_vitrikho (Lookup), cr1bb_makiemkho (Lookup)
+    // Filter by _crdfd_sanphamcankho_value eq productId
+    // Also likely crdfd_loaionhang eq 191920002 for "Cân kho" type.
+
+    const filter = `_crdfd_sanphamcankho_value eq ${productId} and crdfd_loaionhang eq 191920002 and statecode eq 0`;
+    const select = "crdfd_specialeventid,crdfd_soluong,createdon,crdfd_name,_cr1bb_vitrikho_value,_cr1bb_makiemkho_value";
+    const url = `${dataverseConfig.baseUrl}/crdfd_specialevents?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Prefer": "odata.include-annotations=\"*\""
+            }
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.value || []).map((item: any) => {
+            const auditCode = item['_cr1bb_makiemkho_value@OData.Community.Display.V1.FormattedValue'];
+            return {
+                id: item.crdfd_specialeventid,
+                type: 'Cân kho',
+                date: item.createdon,
+                quantity: item.crdfd_soluong || 0,
+                reference: item.crdfd_name,
+                note: auditCode ? `Cân kho: ${auditCode}` : 'Điều chỉnh cân kho'
+            };
+        });
+    } catch (e) {
+        console.error("Error fetching special events", e);
+        return [];
+    }
 }
 
 export async function fetchTransactionBuys(

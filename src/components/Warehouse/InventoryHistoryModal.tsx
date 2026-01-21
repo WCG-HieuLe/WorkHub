@@ -1,14 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import {
-    CloseOutlined,
-    ArrowDownOutlined,
-    ArrowUpOutlined,
-    HistoryOutlined,
-    ControlOutlined,
-    SolutionOutlined
-} from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, ArrowDownLeft, ArrowUpRight, RotateCcw, ClipboardList, Scale, Package } from 'lucide-react';
 import { useMsal } from '@azure/msal-react';
-import { getAccessToken, fetchInventoryHistory, InventoryHistoryRecord, InventoryProduct } from '../../services/dataverseService';
+import { getAccessToken, fetchInventoryHistory, InventoryProduct, InventoryHistorySummary, InventoryHistoryExtendedRecord } from '../../services/dataverseService';
 
 interface InventoryHistoryModalProps {
     product: InventoryProduct;
@@ -17,114 +11,250 @@ interface InventoryHistoryModalProps {
 
 export const InventoryHistoryModal: React.FC<InventoryHistoryModalProps> = ({ product, onClose }) => {
     const { instance, accounts } = useMsal();
-    const [history, setHistory] = useState<InventoryHistoryRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [summary, setSummary] = useState<InventoryHistorySummary | null>(null);
+    const [records, setRecords] = useState<InventoryHistoryExtendedRecord[]>([]);
+    const [activeTab, setActiveTab] = useState<'export' | 'import' | 'return' | 'check' | 'balance'>('export');
 
     useEffect(() => {
         const loadHistory = async () => {
-            if (!accounts[0]) return;
-            setLoading(true);
-            try {
+            if (accounts.length > 0) {
                 const token = await getAccessToken(instance, accounts[0]);
-                const data = await fetchInventoryHistory(token, product.crdfd_kho_binh_dinhid);
-                setHistory(data);
-            } catch (err) {
-                console.error("Error loading history:", err);
-            } finally {
-                setLoading(false);
+                if (token) {
+                    try {
+                        // Pass productCode (crdfd_masp) instead of ID, or fallback to ID if masp missing (though logic requires masp)
+                        const code = product.crdfd_masp || product.productCode || "";
+                        const id = product.productId || "";
+                        const { records, summary } = await fetchInventoryHistory(token, code, id);
+                        setRecords(records);
+                        setSummary(summary);
+                    } catch (error) {
+                        console.error("Failed to load history", error);
+                    }
+                }
             }
+            setLoading(false);
         };
-
         loadHistory();
     }, [product, accounts, instance]);
 
-    const getTypeIcon = (type: string) => {
-        switch (type) {
-            case 'Nhập': return <ArrowUpOutlined className="text-green-500" style={{ fontSize: 18 }} />;
-            case 'Xuất': return <ArrowDownOutlined className="text-red-500" style={{ fontSize: 18 }} />;
-            case 'Cân': return <ControlOutlined className="text-amber-500" style={{ fontSize: 18 }} />;
-            case 'Kiểm kho': return <SolutionOutlined className="text-blue-500" style={{ fontSize: 18 }} />;
-            default: return <HistoryOutlined className="text-gray-500" style={{ fontSize: 18 }} />;
+    // Filter records for tabs
+    const getTabRecords = () => {
+        switch (activeTab) {
+            case 'export':
+                return records.filter(r => r.type === 'Xuất');
+            case 'import':
+                return records.filter(r => r.type === 'Nhập');
+            case 'return':
+                return records.filter(r => (r.quantityReturn && r.quantityReturn > 0));
+            case 'check':
+                return records.filter(r => r.type === 'Kiểm kho');
+            case 'balance':
+                return records.filter(r => r.type === 'Cân kho');
+            default:
+                return [];
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    const formatNumber = (num?: number) => num ? num.toLocaleString('vi-VN') : '0';
+
+    // Use Portal to render outside of current stacking context
+    return createPortal(
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(8px)',
+                padding: '1rem'
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+                    width: '85%',
+                    height: '90%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-header)] flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-[var(--text-primary)]">Lịch sử biến động</h3>
-                        <p className="text-sm text-[var(--text-muted)] mt-1">{product.productName}</p>
+                <div className="flex items-center justify-between p-4 border-b bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                            <Package size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-gray-800">{product.productName}</h2>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">{product.crdfd_masp}</span>
+                                <span>•</span>
+                                <span>{product.warehouseLocation || product.locationName}</span>
+                            </div>
+                        </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-full transition-colors"
-                        title="Đóng"
-                    >
-                        <CloseOutlined style={{ fontSize: 20 }} />
+                    <button onClick={onClose} aria-label="Đóng" className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                        <X size={24} />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-auto p-6">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-[var(--text-muted)]">
-                            <div className="w-8 h-8 border-4 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin"></div>
-                            <p>Đang tải lịch sử...</p>
+                {/* Summary Section */}
+                <div className="p-4 bg-white border-b shadow-sm z-10">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <SummaryCard
+                            label="Tổng Nhập"
+                            value={formatNumber(summary?.totalImport)}
+                            icon={<ArrowDownLeft size={18} />}
+                            color="text-green-600 bg-green-50"
+                        />
+                        <SummaryCard
+                            label="Tổng Xuất"
+                            value={formatNumber(summary?.totalExport)}
+                            icon={<ArrowUpRight size={18} />}
+                            color="text-blue-600 bg-blue-50"
+                        />
+                        <SummaryCard
+                            label="Trả Bán"
+                            value={formatNumber(summary?.totalReturnSale)}
+                            icon={<RotateCcw size={18} />}
+                            color="text-orange-600 bg-orange-50"
+                        />
+                        <SummaryCard
+                            label="Trả Mua"
+                            value={formatNumber(summary?.totalReturnBuy)}
+                            icon={<RotateCcw size={18} />}
+                            color="text-amber-600 bg-amber-50"
+                        />
+                        <SummaryCard
+                            label="Cân Kho"
+                            value={formatNumber(summary?.totalBalance)}
+                            subValue={summary?.totalBalance && summary.totalBalance > 0 ? '+' : ''}
+                            icon={<Scale size={18} />}
+                            color="text-purple-600 bg-purple-50"
+                        />
+                        <div className="flex flex-col p-3 rounded-lg border border-indigo-100 bg-indigo-50/50">
+                            <span className="text-xs font-semibold text-indigo-500 uppercase">Tồn thực tế</span>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-xl font-bold text-indigo-700">
+                                    {formatNumber(summary?.currentStock)}
+                                </span>
+                                <span className="text-xs text-indigo-400">{product.crdfd_onvi}</span>
+                            </div>
                         </div>
-                    ) : history.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-[var(--text-muted)] opacity-50">
-                            <HistoryOutlined style={{ fontSize: 48 }} />
-                            <p className="mt-2">Không có dữ liệu lịch sử</p>
+                    </div>
+                </div>
+
+                {/* Tabs Navigation */}
+                <div className="flex border-b px-4 mt-2">
+                    <TabButton active={activeTab === 'export'} onClick={() => setActiveTab('export')} label="Xuất hàng" icon={<ArrowUpRight size={16} />} count={records.filter(r => r.type === 'Xuất').length} />
+                    <TabButton active={activeTab === 'import'} onClick={() => setActiveTab('import')} label="Nhập hàng" icon={<ArrowDownLeft size={16} />} count={records.filter(r => r.type === 'Nhập').length} />
+                    <TabButton active={activeTab === 'return'} onClick={() => setActiveTab('return')} label="Đổi trả" icon={<RotateCcw size={16} />} count={records.filter(r => (r.quantityReturn && r.quantityReturn > 0)).length} />
+                    <TabButton active={activeTab === 'check'} onClick={() => setActiveTab('check')} label="Kiểm kho" icon={<ClipboardList size={16} />} count={records.filter(r => r.type === 'Kiểm kho').length} />
+                    <TabButton active={activeTab === 'balance'} onClick={() => setActiveTab('balance')} label="Lịch sử cân kho" icon={<Scale size={16} />} count={records.filter(r => r.type === 'Cân kho').length} />
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 overflow-auto bg-gray-50 p-4">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
                         </div>
                     ) : (
-                        <div className="relative">
-                            {/* Vertical Line */}
-                            <div className="absolute left-[17px] top-2 bottom-2 w-0.5 bg-[var(--border)]"></div>
-
-                            <div className="space-y-6 relative">
-                                {history.map((record) => (
-                                    <div key={record.id} className="flex gap-4">
-                                        <div className="relative z-10 flex items-center justify-center w-9 h-9 bg-[var(--bg-card)] border border-[var(--border)] rounded-full shadow-sm">
-                                            {getTypeIcon(record.type)}
-                                        </div>
-                                        <div className="flex-1 pt-1">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-bold text-[var(--text-primary)]">{record.type}</span>
-                                                <span className="text-xs text-[var(--text-muted)]">
-                                                    {new Date(record.date).toLocaleDateString('vi-VN')} {new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-[var(--text-secondary)]">Phiếu: <span className="text-[var(--text-primary)] font-medium">{record.reference}</span></span>
-                                                <span className={`font-mono font-bold ${record.quantity > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                    {record.quantity > 0 ? '+' : ''}{record.quantity.toLocaleString()}
-                                                </span>
-                                            </div>
-                                            {record.note && (
-                                                <p className="mt-2 text-xs text-[var(--text-muted)] bg-[var(--bg-input)] p-2 rounded italic">
-                                                    "{record.note}"
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-500 font-medium">
+                                    <tr>
+                                        <th className="px-4 py-3">Ngày chứng từ</th>
+                                        <th className="px-4 py-3">Số chứng từ / Reference</th>
+                                        <th className="px-4 py-3 text-right">Số lượng</th>
+                                        {(activeTab === 'export' || activeTab === 'import' || activeTab === 'return') && (
+                                            <th className="px-4 py-3 text-right">SL Đổi trả</th>
+                                        )}
+                                        <th className="px-4 py-3">Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {getTabRecords().length > 0 ? (
+                                        getTabRecords().map((record) => (
+                                            <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {new Date(record.date).toLocaleDateString('vi-VN')} <span className="text-xs text-gray-400 ml-1">{new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-gray-700">
+                                                    {record.reference || <span className="italic text-gray-300">N/A</span>}
+                                                </td>
+                                                <td className={`px-4 py-3 text-right font-semibold ${record.quantity > 0 ? 'text-green-600' : record.quantity < 0 ? 'text-blue-600' : 'text-gray-600'
+                                                    }`}>
+                                                    {record.quantity > 0 ? '+' : ''}{formatNumber(record.quantity)}
+                                                </td>
+                                                {(activeTab === 'export' || activeTab === 'import' || activeTab === 'return') && (
+                                                    <td className="px-4 py-3 text-right text-orange-600">
+                                                        {record.quantityReturn ? formatNumber(record.quantityReturn) : '-'}
+                                                    </td>
+                                                )}
+                                                <td className="px-4 py-3 text-gray-500 max-w-xs truncate" title={record.note}>
+                                                    {record.note || '-'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
+                                                Không có dữ liệu
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 border-t border-[var(--border)] bg-[var(--bg-header)] flex justify-end">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium bg-[var(--bg-input)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
-                    >
-                        Đóng
-                    </button>
-                </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
+
+// Components
+const SummaryCard = ({ label, value, subValue, icon, color }: any) => (
+    <div className="flex flex-col p-3 rounded-lg border border-gray-100 bg-white shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+            <div className={`p-1.5 rounded-md ${color} bg-opacity-20`}>
+                {icon}
+            </div>
+            <span className="text-xs font-medium text-gray-500 uppercase">{label}</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-gray-800">
+                {subValue}{value}
+            </span>
+        </div>
+    </div>
+);
+
+const TabButton = ({ active, onClick, label, icon, count }: any) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${active
+            ? 'border-blue-500 text-blue-600 bg-blue-50/50'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+    >
+        {icon}
+        {label}
+        {count !== undefined && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                {count}
+            </span>
+        )}
+    </button>
+);

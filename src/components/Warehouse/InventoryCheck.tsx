@@ -3,9 +3,9 @@ import {
     SearchOutlined,
     LeftOutlined,
     RightOutlined,
-    ReloadOutlined,
-    ExportOutlined
+    ReloadOutlined
 } from '@ant-design/icons';
+import { ExternalLink, History } from 'lucide-react';
 import { useMsal } from '@azure/msal-react';
 import {
     getAccessToken,
@@ -13,8 +13,10 @@ import {
     fetchWarehouseLocationsForFilter,
     InventoryCheckItem,
     InventoryCheckPaginatedResponse,
-    WarehouseLocationOption
+    WarehouseLocationOption,
+    InventoryProduct
 } from '../../services/dataverseService';
+import { InventoryHistoryModal } from './InventoryHistoryModal';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -34,6 +36,10 @@ export const InventoryCheck: React.FC = () => {
     // Filter states
     const [locations, setLocations] = useState<WarehouseLocationOption[]>([]);
     const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+    // Modal state
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
 
 
     // Debounce search
@@ -142,6 +148,16 @@ export const InventoryCheck: React.FC = () => {
 
     const handleRefresh = () => {
         loadData();
+    };
+
+    const handleHistoryClick = (item: InventoryCheckItem) => {
+        const productForModal: InventoryProduct = {
+            ...item,
+            crdfd_masp: item.productCode,
+            locationName: item.warehouseLocation
+        } as unknown as InventoryProduct;
+        setSelectedProduct(productForModal);
+        setShowHistoryModal(true);
     };
 
     const renderPagination = () => {
@@ -258,7 +274,7 @@ export const InventoryCheck: React.FC = () => {
                             </tr>
                         ) : (
                             paginatedData.map((item) => (
-                                <tr key={item.crdfd_kho_binh_dinhid}>
+                                <tr key={item.crdfd_kho_binh_dinhid} className={item.tonKhoThucTe < 0 ? 'negative-stock-row' : ''}>
                                     <td className="font-medium text-accent-primary">{item.productCode}</td>
                                     <td>{item.productName}</td>
                                     <td>Cái</td>
@@ -279,8 +295,15 @@ export const InventoryCheck: React.FC = () => {
                                             className="action-icon-link"
                                             title="Mở trong Dynamics 365"
                                         >
-                                            <ExportOutlined />
+                                            <ExternalLink size={16} />
                                         </a>
+                                        <button
+                                            onClick={() => handleHistoryClick(item)}
+                                            className="action-icon-btn"
+                                            title="Xem lịch sử biến động"
+                                        >
+                                            <History size={16} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
@@ -332,6 +355,13 @@ export const InventoryCheck: React.FC = () => {
                 </div>
             )}
 
+            {/* History Modal */}
+            {showHistoryModal && selectedProduct && (
+                <InventoryHistoryModal
+                    product={selectedProduct}
+                    onClose={() => setShowHistoryModal(false)}
+                />
+            )}
         </div>
     );
 };

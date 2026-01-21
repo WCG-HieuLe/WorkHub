@@ -21,7 +21,6 @@ interface DataRow {
     warehouseStrangeStock: string;
     historyConfidence: string;
     confidenceLevel: string;
-    stockStatus: string;
 }
 
 export const DataTrackerTable: React.FC<DataTrackerTableProps> = ({ selectedTable }) => {
@@ -80,8 +79,7 @@ export const DataTrackerTable: React.FC<DataTrackerTableProps> = ({ selectedTabl
                 strangeStock: (item.crdfd_strangestock ?? 0).toFixed(2),
                 warehouseStrangeStock: (item.crdfd_warehousestrangestock ?? 0).toFixed(2),
                 historyConfidence: (item.crdfd_historyconfidence ?? 0).toFixed(2),
-                confidenceLevel: item.crdfd_confidencelevel || 'No data',
-                stockStatus: item.crdfd_stockstatus || 'O'
+                confidenceLevel: item.crdfd_confidencelevel || 'No data'
             }));
 
             setData(transformedData);
@@ -241,7 +239,6 @@ export const DataTrackerTable: React.FC<DataTrackerTableProps> = ({ selectedTabl
                             <th className="px-3 py-2 text-left font-medium text-[var(--text-secondary)]">Tồn kỳ lạ kho</th>
                             <th className="px-3 py-2 text-left font-medium text-[var(--text-secondary)]">Điểm tin tưởng lịch sử</th>
                             <th className="px-3 py-2 text-left font-medium text-[var(--text-secondary)]">Confident Level</th>
-                            <th className="px-3 py-2 text-left font-medium text-[var(--text-secondary)]">Stock</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -278,12 +275,6 @@ export const DataTrackerTable: React.FC<DataTrackerTableProps> = ({ selectedTabl
                                             : 'bg-green-500/10 text-green-500'
                                         }`}>
                                         {row.confidenceLevel}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium ${row.stockStatus === 'O' ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-500'
-                                        }`}>
-                                        {row.stockStatus}
                                     </span>
                                 </td>
                             </tr>

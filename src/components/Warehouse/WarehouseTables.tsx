@@ -17,7 +17,6 @@ interface DataRow {
     warehouseStrangeStock: string;
     historyConfidence: string;
     confidenceLevel: string;
-    stockStatus: string;
 }
 
 export const WarehouseTables: React.FC = () => {
@@ -73,8 +72,7 @@ export const WarehouseTables: React.FC = () => {
                 strangeStock: (item.crdfd_strangestock ?? 0).toFixed(2),
                 warehouseStrangeStock: (item.crdfd_warehousestrangestock ?? 0).toFixed(2),
                 historyConfidence: (item.crdfd_historyconfidence ?? 0).toFixed(2),
-                confidenceLevel: item.crdfd_confidencelevel || 'No data',
-                stockStatus: item.crdfd_stockstatus || 'O'
+                confidenceLevel: item.crdfd_confidencelevel || 'No data'
             }));
 
             setData(transformedData);
@@ -190,7 +188,6 @@ export const WarehouseTables: React.FC = () => {
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">TK Kho</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Confidence</th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Level</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap bg-[var(--bg-card)]">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
@@ -240,14 +237,6 @@ export const WarehouseTables: React.FC = () => {
                                                     : 'bg-green-500/10 text-green-500 border-green-500/20'
                                                 }`}>
                                                 {row.confidenceLevel}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ring-1 ring-inset ${row.stockStatus === 'O'
-                                                ? 'bg-gray-500/10 text-gray-400 ring-gray-500/20'
-                                                : 'bg-green-500/10 text-green-500 ring-green-500/20'
-                                                }`}>
-                                                {row.stockStatus}
                                             </span>
                                         </td>
                                     </tr>

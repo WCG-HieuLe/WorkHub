@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
-import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText } from '../services/dataverseService';
+import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus } from '../services/dataverseService';
 import { LeaveDetailModal } from './LeaveDetailModal';
 
 interface LeaveDashboardProps {
@@ -114,6 +114,31 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
     const handleRowClick = (item: TeamRegistration | DNTTRecord, type: 'registration' | 'dntt') => {
         setSelectedItem(item);
         setSelectedType(type);
+    };
+
+    // Handle DNTT field update
+    const [updating, setUpdating] = useState(false);
+    const handleDNTTFieldChange = async (fieldName: string, value: number | null) => {
+        if (!selectedItem || !accounts[0]) return;
+        const dnttRecord = selectedItem as DNTTRecord;
+        setUpdating(true);
+        try {
+            const token = await getAccessToken(instance, accounts[0]);
+            const success = await updateDNTTStatus(token, dnttRecord.cr44a_enghithanhtoanid, fieldName, value);
+            if (success) {
+                // Refresh data
+                await loadData();
+                // Close modal
+                closeModal();
+            } else {
+                alert('Cập nhật thất bại!');
+            }
+        } catch (e) {
+            console.error('Error updating DNTT:', e);
+            alert('Đã xảy ra lỗi!');
+        } finally {
+            setUpdating(false);
+        }
     };
 
     return (
@@ -294,10 +319,16 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                                         {(selectedItem as DNTTRecord).cr1bb_loaihosothanhtoan || '-'}
                                     </div>
                                 </div>
-                                <div className="detail-field">
-                                    <label className="detail-label">Số tiền đề nghị</label>
-                                    <div className="detail-value highlight" style={{ color: 'var(--success)' }}>
-                                        {formatCurrency((selectedItem as DNTTRecord).cr44a_sotien_de_nghi)}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="detail-field">
+                                        <label className="detail-label">Số tiền đề nghị</label>
+                                        <div className="detail-value highlight" style={{ color: 'var(--success)' }}>
+                                            {formatCurrency((selectedItem as DNTTRecord).cr44a_sotien_de_nghi)}
+                                        </div>
+                                    </div>
+                                    <div className="detail-field">
+                                        <label className="detail-label">Người đề nghị</label>
+                                        <div className="detail-value">{(selectedItem as DNTTRecord).ownerName || '-'}</div>
                                     </div>
                                 </div>
                                 <div className="detail-field">
@@ -318,14 +349,27 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                                     </div>
                                 </div>
                                 <div className="detail-field">
+                                    <label className="detail-label">Trưởng bộ phận</label>
+                                    <div className="detail-value">
+                                        <select
+                                            className="status-select"
+                                            aria-label="Trưởng bộ phận duyệt"
+                                            value={(selectedItem as DNTTRecord).cr44a_truongbophan_value ?? ''}
+                                            onChange={(e) => handleDNTTFieldChange('cr44a_truongbophan', e.target.value ? parseInt(e.target.value) : null)}
+                                            disabled={updating}
+                                        >
+                                            <option value="">-- Chọn --</option>
+                                            <option value="191920000">Chưa duyệt</option>
+                                            <option value="191920001">Đã duyệt</option>
+                                            <option value="191920002">Từ chối</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="detail-field">
                                     <label className="detail-label">Kế toán tổng hợp</label>
                                     <div className="detail-value">
                                         {(selectedItem as DNTTRecord).cr44a_ketoantonghop || '-'}
                                     </div>
-                                </div>
-                                <div className="detail-field">
-                                    <label className="detail-label">Người tạo</label>
-                                    <div className="detail-value">{(selectedItem as DNTTRecord).ownerName || '-'}</div>
                                 </div>
                             </div>
                         </div>

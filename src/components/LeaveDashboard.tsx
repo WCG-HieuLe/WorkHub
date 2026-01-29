@@ -359,9 +359,9 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                                             disabled={updating}
                                         >
                                             <option value="">-- Chọn --</option>
-                                            <option value="191920000">Chưa duyệt</option>
-                                            <option value="191920001">Đã duyệt</option>
-                                            <option value="191920002">Từ chối</option>
+                                            <option value="283640001">Chưa duyệt</option>
+                                            <option value="283640000">Đã duyệt</option>
+                                            <option value="283640002">Từ chối duyệt</option>
                                         </select>
                                     </div>
                                 </div>

@@ -4,9 +4,9 @@
  */
 
 import { dataverseConfig } from '../../config/authConfig';
-import { createFetchHeaders, createFetchHeadersWithAnnotations } from './common';
+import { createFetchHeadersWithAnnotations } from './common';
 import { cache } from '../../utils/cacheUtils';
-import { measureApiCall, createCacheKey } from '../../utils/performanceUtils';
+import { measureApiCall } from '../../utils/performanceUtils';
 import {
     TransactionSales,
     TransactionSalesPaginatedResponse,
@@ -16,11 +16,13 @@ import {
     InventoryCheckPaginatedResponse,
     WarehouseLocationOption,
     InventoryProduct,
-    InventoryProductsPaginatedResponse,
-    InventoryHistoryExtendedRecord,
-    InventoryHistorySummary
+    InventoryProductsPaginatedResponse
 } from './types';
 import { escapeODataString } from './common';
+
+// ============================================================================
+// TRANSACTION SERVICES
+// ============================================================================
 
 /**
  * Fetch Transaction Sales
@@ -186,7 +188,7 @@ export async function fetchWarehouseLocationsForFilter(
             const items = data.value || [];
             const locationMap = new Map<string, string>();
 
-            items.forEach((item: { _crdfd_vitrikho_value?: string; [key: string]: unknown }) => {
+            items.forEach((item: { _crdfd_vitrikho_value?: string;[key: string]: unknown }) => {
                 const id = item._crdfd_vitrikho_value;
                 const name = (item['_crdfd_vitrikho_value@OData.Community.Display.V1.FormattedValue'] as string);
 
@@ -376,9 +378,9 @@ export async function fetchInventoryProducts(
 
         const mappedItems: InventoryProduct[] = items.map((item: InventoryProduct & { [key: string]: unknown }) => ({
             crdfd_kho_binh_dinhid: item.crdfd_kho_binh_dinhid as string,
-            productName: (item['_crdfd_tensanphamlookup_value@OData.Community.Display.V1.FormattedValue'] as string) 
-                || (item.crdfd_tensptext as string) 
-                || (item.crdfd_masp as string) 
+            productName: (item['_crdfd_tensanphamlookup_value@OData.Community.Display.V1.FormattedValue'] as string)
+                || (item.crdfd_tensptext as string)
+                || (item.crdfd_masp as string)
                 || "Unknown",
             productCode: (item.crdfd_masp as string) || "",
             crdfd_masp: item.crdfd_masp as string,
@@ -403,165 +405,5 @@ export async function fetchInventoryProducts(
     }
 }
 
-/**
- * Fetch Inventory History Aggregation
- */
-export async function fetchInventoryHistory(
-    accessToken: string,
-    productCode: string,
-    productId: string
-): Promise<{ records: InventoryHistoryExtendedRecord[], summary: InventoryHistorySummary }> {
-    const cacheKey = createCacheKey('inventory_history', productCode, productId);
-    const cached = cache.get<{ records: InventoryHistoryExtendedRecord[], summary: InventoryHistorySummary }>(cacheKey);
 
-    if (cached) {
-        return cached;
-    }
-
-    return await measureApiCall(`fetchInventoryHistory:${productCode}`, async () => {
-        const [sales, buys, specialEvents] = await Promise.all([
-            fetchProductSalesTransactions(accessToken, productCode),
-            fetchProductBuyTransactions(accessToken, productCode),
-            fetchProductSpecialEvents(accessToken, productId)
-        ]);
-
-        let totalImport = 0;
-        let totalExport = 0;
-        let totalReturnSale = 0;
-        let totalReturnBuy = 0;
-        let totalBalance = 0;
-
-        const records: InventoryHistoryExtendedRecord[] = [];
-
-        sales.forEach(s => {
-            const qtyExport = s.crdfd_soluonggiaotheokho || 0;
-            const qtyReturn = s.crdfd_soluongoitratheokhonew || 0;
-            totalExport += qtyExport;
-            totalReturnSale += qtyReturn;
-            records.push({
-                id: s.crdfd_transactionsalesid,
-                type: 'Xuất',
-                date: s.createdon || '',
-                quantity: -qtyExport,
-                quantityReturn: qtyReturn,
-                reference: s.crdfd_maphieuxuat || ''
-            });
-        });
-
-        buys.forEach(b => {
-            const qtyImport = b.crdfd_soluonganhantheokho || 0;
-            const qtyReturn = b.crdfd_soluongoitratheokhonew || 0;
-            totalImport += qtyImport;
-            totalReturnBuy += qtyReturn;
-            records.push({
-                id: b.crdfd_transactionbuyid,
-                type: 'Nhập',
-                date: b.createdon || '',
-                quantity: qtyImport,
-                quantityReturn: qtyReturn,
-                reference: b.crdfd_name || '',
-            });
-        });
-
-        specialEvents.forEach(e => {
-            const qty = e.quantity || 0;
-            totalBalance += qty;
-            records.push({
-                id: e.id,
-                type: 'Cân kho',
-                date: e.date || '',
-                quantity: qty,
-                reference: e.reference || '',
-                note: e.note
-            });
-        });
-
-        const currentStock = (totalImport - totalReturnBuy) - (totalExport - totalReturnSale) + totalBalance;
-        records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const result = {
-            records,
-            summary: {
-                totalImport,
-                totalExport,
-                totalReturnSale,
-                totalReturnBuy,
-                totalBalance,
-                currentStock
-            }
-        };
-
-        cache.set(cacheKey, result, 5 * 60 * 1000);
-        return result;
-    });
-}
-
-// Helper functions
-async function fetchProductSalesTransactions(token: string, productCode: string): Promise<TransactionSales[]> {
-    const filter = `statecode eq 0 and crdfd_masanpham eq '${productCode}'`;
-    const select = "crdfd_transactionsalesid,crdfd_maphieuxuat,crdfd_soluonggiaotheokho,crdfd_soluongoitratheokhonew,createdon";
-    const url = `${dataverseConfig.baseUrl}/crdfd_transactionsaleses?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
-
-    try {
-        const res = await fetch(url, { headers: createFetchHeaders(token) });
-        if (!res.ok) {
-            console.error(`Error fetching Sale history. Status: ${res.status}`, await res.text());
-            return [];
-        }
-        const data = await res.json();
-        return data.value || [];
-    } catch (e) {
-        console.error("Exception fetching sales history", e);
-        return [];
-    }
-}
-
-async function fetchProductBuyTransactions(token: string, productCode: string): Promise<TransactionBuy[]> {
-    const filter = `statecode eq 0 and crdfd_masanpham eq '${productCode}'`;
-    const select = "crdfd_transactionbuyid,crdfd_name,crdfd_soluonganhantheokho,crdfd_soluongoitratheokhonew,createdon";
-    const url = `${dataverseConfig.baseUrl}/crdfd_transactionbuies?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
-
-    try {
-        const res = await fetch(url, { headers: createFetchHeaders(token) });
-        if (!res.ok) {
-            console.error(`Error fetching Buy history. Status: ${res.status}`, await res.text());
-            return [];
-        }
-        const data = await res.json();
-        return data.value || [];
-    } catch (e) {
-        console.error("Exception fetching buy history", e);
-        return [];
-    }
-}
-
-async function fetchProductSpecialEvents(accessToken: string, productId: string): Promise<InventoryHistoryExtendedRecord[]> {
-    if (!productId) return [];
-
-    const filter = `_crdfd_sanphamcankho_value eq ${productId} and crdfd_loaionhang eq 191920002 and statecode eq 0`;
-    const select = "crdfd_specialeventid,crdfd_soluong,createdon,crdfd_name,_cr1bb_vitrikho_value,_cr1bb_makiemkho_value";
-    const url = `${dataverseConfig.baseUrl}/crdfd_specialevents?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=createdon desc`;
-
-    try {
-        const response = await fetch(url, {
-            headers: createFetchHeadersWithAnnotations(accessToken)
-        });
-        if (!response.ok) return [];
-        const data = await response.json();
-        return (data.value || []).map((item: { [key: string]: unknown }) => {
-            const auditCode = (item['_cr1bb_makiemkho_value@OData.Community.Display.V1.FormattedValue'] as string);
-            return {
-                id: item.crdfd_specialeventid as string,
-                type: 'Cân kho',
-                date: item.createdon as string,
-                quantity: (item.crdfd_soluong as number) || 0,
-                reference: item.crdfd_name as string,
-                note: auditCode ? `Cân kho: ${auditCode}` : 'Điều chỉnh cân kho'
-            };
-        });
-    } catch (e) {
-        console.error("Error fetching special events", e);
-        return [];
-    }
-}
 

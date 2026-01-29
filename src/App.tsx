@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { InteractionStatus } from '@azure/msal-browser';
+import { RocketOutlined, DatabaseOutlined } from '@ant-design/icons';
 
 import { Header } from './components/Header';
 import { Calendar } from './components/Calendar';
@@ -28,7 +29,7 @@ function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check'>('personal');
+    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management'>('personal');
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -150,6 +151,8 @@ function App() {
             case 'warehouse-flow': return 'Flow Monitor';
             case 'warehouse': return 'Warehouse';
             case 'inventory-check': return 'Check tồn kho';
+            case 'figma2product': return 'Figma2Product';
+            case 'data-management': return 'Data Management';
             default: return 'WorkHub';
         }
     }, [currentViewState]);
@@ -158,128 +161,144 @@ function App() {
         <ThemeProvider>
             <ErrorBoundary>
                 <div className="app">
-                <Sidebar
-                    currentView={currentViewState}
-                    onChangeView={setCurrentViewState}
-                    user={accounts[0] || null}
-                    isAuthenticated={isAuthenticated}
-                    onLogin={handleLogin}
-                    onLogout={handleLogout}
-                />
-
-                <div className="main-layout">
-                    <Header
-                        year={year}
-                        month={month}
-                        onMonthChange={handleMonthChange}
-                        title={getHeaderTitle}
-                        showDateNav={currentViewState === 'personal' || currentViewState === 'team'}
+                    <Sidebar
+                        currentView={currentViewState}
+                        onChangeView={setCurrentViewState}
+                        user={accounts[0] || null}
+                        isAuthenticated={isAuthenticated}
+                        onLogin={handleLogin}
+                        onLogout={handleLogout}
                     />
 
-                    {currentViewState === 'personal' ? (
-                        <>
-                            {error && (
-                                <div className="error-banner error-message-container">
-                                    ⚠️ {error}
-                                </div>
-                            )}
+                    <div className="main-layout">
+                        <Header
+                            year={year}
+                            month={month}
+                            onMonthChange={handleMonthChange}
+                            title={getHeaderTitle}
+                            showDateNav={currentViewState === 'personal' || currentViewState === 'team'}
+                        />
 
+                        {currentViewState === 'personal' ? (
+                            <>
+                                {error && (
+                                    <div className="error-banner error-message-container">
+                                        ⚠️ {error}
+                                    </div>
+                                )}
+
+                                <main className="main-content">
+                                    {inProgress !== InteractionStatus.None && (
+                                        <div className="loading-state">
+                                            <div className="spinner"></div>
+                                            <p>Đang xác thực...</p>
+                                        </div>
+                                    )}
+
+                                    {!isAuthenticated && inProgress === InteractionStatus.None && (
+                                        <div className="welcome-screen">
+                                            <h2>Welcome to WorkHub</h2>
+                                            <p>Vui lòng đăng nhập để xem dữ liệu chấm công của bạn.</p>
+                                        </div>
+                                    )}
+
+                                    {isAuthenticated && !loading && (
+                                        <div className="content-grid">
+                                            <div className="calendar-section">
+                                                <Calendar
+                                                    year={year}
+                                                    month={month}
+                                                    records={records}
+                                                    selectedDate={selectedDate}
+                                                    onSelectDate={handleSelectDate}
+                                                />
+                                            </div>
+
+                                            <div className="summary-section">
+                                                <WorkSummary
+                                                    summary={summary}
+                                                    year={year}
+                                                    month={month}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {loading && isAuthenticated && (
+                                        <div className="loading">
+                                            <div className="spinner"></div>
+                                            <p>Đang tải dữ liệu...</p>
+                                        </div>
+                                    )}
+                                </main>
+                            </>
+                        ) : currentViewState === 'team' ? (
+                            <div className="main-content">
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <LeaveDashboard employeeId={employeeId} year={year} month={month} />
+                                </Suspense>
+                            </div>
+                        ) : currentViewState === 'audit' ? (
                             <main className="main-content">
-                                {inProgress !== InteractionStatus.None && (
-                                    <div className="loading-state">
-                                        <div className="spinner"></div>
-                                        <p>Đang xác thực...</p>
-                                    </div>
-                                )}
-
-                                {!isAuthenticated && inProgress === InteractionStatus.None && (
-                                    <div className="welcome-screen">
-                                        <h2>Welcome to WorkHub</h2>
-                                        <p>Vui lòng đăng nhập để xem dữ liệu chấm công của bạn.</p>
-                                    </div>
-                                )}
-
-                                {isAuthenticated && !loading && (
-                                    <div className="content-grid">
-                                        <div className="calendar-section">
-                                            <Calendar
-                                                year={year}
-                                                month={month}
-                                                records={records}
-                                                selectedDate={selectedDate}
-                                                onSelectDate={handleSelectDate}
-                                            />
-                                        </div>
-
-                                        <div className="summary-section">
-                                            <WorkSummary
-                                                summary={summary}
-                                                year={year}
-                                                month={month}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {loading && isAuthenticated && (
-                                    <div className="loading">
-                                        <div className="spinner"></div>
-                                        <p>Đang tải dữ liệu...</p>
-                                    </div>
-                                )}
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <AuditLogs />
+                                </Suspense>
                             </main>
-                        </>
-                    ) : currentViewState === 'team' ? (
-                        <div className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <LeaveDashboard employeeId={employeeId} year={year} month={month} />
-                            </Suspense>
-                        </div>
-                    ) : currentViewState === 'audit' ? (
-                        <main className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <AuditLogs />
-                            </Suspense>
-                        </main>
-                    ) : currentViewState === 'tools' ? (
-                        <div className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <Tools />
-                            </Suspense>
-                        </div>
-                    ) : currentViewState === 'inventory-check' ? (
-                        <div className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <InventoryCheck />
-                            </Suspense>
-                        </div>
-                    ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-flow' ? (
-                        <div className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <WarehouseLayout activeView={
-                                    currentViewState === 'warehouse-tables' ? 'tables' :
-                                        currentViewState === 'warehouse-flow' ? 'flow' : undefined
-                                } />
-                            </Suspense>
-                        </div>
-                    ) : (
-                        <div className="main-content">
-                            <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                <Management />
-                            </Suspense>
-                        </div>
+                        ) : currentViewState === 'tools' ? (
+                            <div className="main-content">
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <Tools />
+                                </Suspense>
+                            </div>
+                        ) : currentViewState === 'inventory-check' ? (
+                            <div className="main-content">
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <InventoryCheck />
+                                </Suspense>
+                            </div>
+                        ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-flow' ? (
+                            <div className="main-content">
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <WarehouseLayout activeView={
+                                        currentViewState === 'warehouse-tables' ? 'tables' :
+                                            currentViewState === 'warehouse-flow' ? 'flow' : undefined
+                                    } />
+                                </Suspense>
+                            </div>
+                        ) : currentViewState === 'figma2product' ? (
+                            <div className="main-content">
+                                <div className="placeholder-view">
+                                    <RocketOutlined style={{ fontSize: 48, color: 'var(--accent-color)', marginBottom: 16 }} />
+                                    <h2>Figma2Product</h2>
+                                    <p style={{ color: 'var(--text-muted)' }}>Dự án đang phát triển...</p>
+                                </div>
+                            </div>
+                        ) : currentViewState === 'data-management' ? (
+                            <div className="main-content">
+                                <div className="placeholder-view">
+                                    <DatabaseOutlined style={{ fontSize: 48, color: 'var(--accent-color)', marginBottom: 16 }} />
+                                    <h2>Data Management</h2>
+                                    <p style={{ color: 'var(--text-muted)' }}>Dự án đang phát triển...</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="main-content">
+                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
+                                    <Management />
+                                </Suspense>
+                            </div>
+                        )}
+                    </div>
+
+                    {selectedRecord && (
+                        <DayDetail
+                            record={selectedRecord}
+                            onClose={() => setSelectedDate(null)}
+                            employeeId={employeeId}
+                            onSaveSuccess={loadData}
+                        />
                     )}
                 </div>
-
-                {selectedRecord && (
-                    <DayDetail
-                        record={selectedRecord}
-                        onClose={() => setSelectedDate(null)}
-                        employeeId={employeeId}
-                        onSaveSuccess={loadData}
-                    />
-                )}
-            </div>
             </ErrorBoundary>
         </ThemeProvider>
     );

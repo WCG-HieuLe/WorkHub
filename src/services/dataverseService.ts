@@ -395,9 +395,22 @@ function mergeTimekeepingAndRegistration(
                     registration: registrationInfo
                 });
             } else {
-                // Ngày ĐÃ CÓ dữ liệu chấm công - chỉ attach registration info
-                // Trường hợp: nghỉ phép nửa ngày (4h làm việc + 4h nghỉ phép)
+                // Ngày ĐÃ CÓ dữ liệu chấm công - attach registration info
                 existing.registration = registrationInfo;
+
+                // Nếu phiếu đã duyệt, cộng thêm workValue từ phiếu đăng ký
+                if (reg.crdfd_captrenduyet === ApprovalStatus.DaDuyet) {
+                    const dayOfWeek = d.getDay();
+                    const regWorkVal = calculateRegistrationWorkValue(
+                        reg.crdfd_loaiangky,
+                        reg.crdfd_sogio2,
+                        dayOfWeek
+                    );
+
+                    // Cộng dồn nhưng không vượt quá công chuẩn
+                    const maxWorkVal = (dayOfWeek === 6) ? 0.5 : 1.0;
+                    existing.workValue = Math.min(existing.workValue + regWorkVal, maxWorkVal);
+                }
 
                 // Cập nhật note nếu có
                 if (reg.crdfd_diengiai) {
@@ -432,6 +445,44 @@ export function getApprovalStatusText(status?: number): string {
         case ApprovalStatus.DaDuyet: return "Đã duyệt";
         case ApprovalStatus.TuChoi: return "Từ chối";
         default: return "Chưa duyệt"; // Default pending
+    }
+}
+
+/**
+ * Tính workValue từ phiếu đăng ký đã duyệt
+ * Chỉ áp dụng cho các loại phiếu được tính công (nghỉ phép, v.v.)
+ */
+function calculateRegistrationWorkValue(
+    type: number,
+    hours: number | undefined,
+    dayOfWeek: number
+): number {
+    const standardHours = getStandardHours(dayOfWeek);
+    const maxWorkVal = (dayOfWeek === 6) ? 0.5 : 1.0;
+
+    switch (type) {
+        case RegistrationType.NghiPhep:
+            // Nghỉ phép được tính công
+            if (hours !== undefined && standardHours > 0) {
+                return (hours / standardHours) * maxWorkVal;
+            }
+            return maxWorkVal;
+
+        case RegistrationType.LamViecTaiNha:
+        case RegistrationType.CongTac:
+            // Đã tính trong giờ làm, không cộng thêm
+            return 0;
+
+        case RegistrationType.NghiKhongLuong:
+            // Không tính công
+            return 0;
+
+        case RegistrationType.TangCa:
+            // Tăng ca không tính vào công chuẩn
+            return 0;
+
+        default:
+            return 0;
     }
 }
 

@@ -8,7 +8,6 @@ import {
     InventoryProduct,
     InventoryProductsPaginatedResponse
 } from '../../services/dataverse';
-import { InventoryHistoryModal } from './InventoryHistoryModal';
 
 interface LocationOption {
     id: string;
@@ -26,7 +25,6 @@ export const ProductsList: React.FC = () => {
     const [locations, setLocations] = useState<LocationOption[]>([]);
     const [selectedLocation, setSelectedLocation] = useState<string>('');
     const [onlyNegativeStock, setOnlyNegativeStock] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -274,7 +272,6 @@ export const ProductsList: React.FC = () => {
                                     {products.map((row) => (
                                         <div
                                             key={row.crdfd_kho_binh_dinhid}
-                                            onClick={() => setSelectedProduct(row)}
                                             className="group relative bg-[#1c1c1e]/40 hover:bg-[#2c2c2e]/60 border border-white/5 hover:border-accent-primary/40 rounded-[2rem] p-5 cursor-pointer transition-all duration-500 shadow-xl overflow-hidden backdrop-blur-xl"
                                         >
                                             {/* Top Row: Name & Icon */}
@@ -362,14 +359,6 @@ export const ProductsList: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            )}
-
-            {/* History Modal */}
-            {selectedProduct && (
-                <InventoryHistoryModal
-                    product={selectedProduct}
-                    onClose={() => setSelectedProduct(null)}
-                />
             )}
         </div>
     );

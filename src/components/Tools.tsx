@@ -4,7 +4,7 @@ import { Github, BarChart3, GraduationCap, ShieldCheck, Zap, Figma } from 'lucid
 const tools = [
     {
         name: 'Github',
-        url: 'https://github.com/Wecare-tool?tab=repositories',
+        url: 'https://github.com/orgs/WCG-HieuLe/repositories',
         icon: <Github size={48} strokeWidth={1.5} />
     },
     {

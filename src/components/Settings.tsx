@@ -124,15 +124,27 @@ export const Settings: React.FC = () => {
         resetCustomColors
     } = useTheme();
 
-    const [bgFamily, setBgFamily] = useState<string>(() => getCurrentFamily(bgFamilies, customColors.bgPrimary));
-    const [accentFamily, setAccentFamily] = useState<string>(() => getCurrentFamily(accentFamilies, customColors.accentPrimary));
+    const [bgFamily, setBgFamily] = useState<string>(() => {
+        const saved = localStorage.getItem('settings-bg-family');
+        if (saved && bgFamilies.includes(saved)) return saved;
+        return getCurrentFamily(bgFamilies, customColors.bgPrimary);
+    });
+    const [accentFamily, setAccentFamily] = useState<string>(() => {
+        const saved = localStorage.getItem('settings-accent-family');
+        if (saved && accentFamilies.includes(saved)) return saved;
+        return getCurrentFamily(accentFamilies, customColors.accentPrimary);
+    });
+
+    // Save family choices to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('settings-bg-family', bgFamily);
+    }, [bgFamily]);
 
     useEffect(() => {
-        setBgFamily(getCurrentFamily(bgFamilies, customColors.bgPrimary));
-        setAccentFamily(getCurrentFamily(accentFamilies, customColors.accentPrimary));
-    }, [customColors.bgPrimary, customColors.accentPrimary]);
+        localStorage.setItem('settings-accent-family', accentFamily);
+    }, [accentFamily]);
 
-    const handleShadeSelect = (type: 'bg' | 'accent' | 'sidebar' | 'main', hex: string) => {
+    const handleShadeSelect = (type: 'bg' | 'accent' | 'sidebar' | 'main' | 'component' | 'item', hex: string) => {
         if (type === 'bg') {
             setCustomColor('bgPrimary', hex);
             const family = bgFamily;
@@ -149,6 +161,10 @@ export const Settings: React.FC = () => {
             setCustomColor('bgSidebar', hex);
         } else if (type === 'main') {
             setCustomColor('bgMainLayout', hex);
+        } else if (type === 'component') {
+            setCustomColor('bgComponent', hex);
+        } else if (type === 'item') {
+            setCustomColor('bgItem', hex);
         } else {
             setCustomColor('accentPrimary', hex);
             const shadeValue = Object.keys(colorPalettes[accentFamily]).find(k => colorPalettes[accentFamily][parseInt(k)] === hex);
@@ -179,9 +195,10 @@ export const Settings: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <ColorFamilyPicker families={bgFamilies} active={bgFamily} onChange={setBgFamily} label="Background Palette" />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-                                <ShadeRow family={bgFamily} label="Background" type="bg" activeHex={customColors.bgPrimary} onSelect={handleShadeSelect} />
                                 <ShadeRow family={bgFamily} label="Sidebar" type="sidebar" activeHex={customColors.bgSidebar} onSelect={handleShadeSelect} />
                                 <ShadeRow family={bgFamily} label="Main Layout" type="main" activeHex={customColors.bgMainLayout} onSelect={handleShadeSelect} />
+                                <ShadeRow family={bgFamily} label="Component" type="component" activeHex={customColors.bgComponent} onSelect={handleShadeSelect} />
+                                <ShadeRow family={bgFamily} label="Item" type="item" activeHex={customColors.bgItem} onSelect={handleShadeSelect} />
                             </div>
                         </div>
                     </div>

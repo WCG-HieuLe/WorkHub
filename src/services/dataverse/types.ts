@@ -202,26 +202,3 @@ export interface InventoryProductsPaginatedResponse {
     hasPreviousPage: boolean;
 }
 
-export interface InventoryHistoryRecord {
-    id: string;
-    type: string;
-    date: string;
-    quantity: number;
-    reference: string;
-    note?: string;
-}
-
-export interface InventoryHistoryExtendedRecord extends InventoryHistoryRecord {
-    originalData?: unknown;
-    quantityReturn?: number;
-}
-
-export interface InventoryHistorySummary {
-    totalImport: number;
-    totalExport: number;
-    totalReturnSale: number;
-    totalReturnBuy: number;
-    totalBalance: number;
-    currentStock: number;
-}
-

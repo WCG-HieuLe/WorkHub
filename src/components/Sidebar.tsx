@@ -9,13 +9,15 @@ import {
     CalendarOutlined,
     FormOutlined,
     AuditOutlined,
-    LoginOutlined
+    LoginOutlined,
+    RocketOutlined,
+    DatabaseOutlined
 } from '@ant-design/icons';
 import { Settings } from './Settings';
 
 interface SidebarProps {
-    currentView: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check';
-    onChangeView: (view: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check') => void;
+    currentView: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management';
+    onChangeView: (view: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management') => void;
     user: AccountInfo | null;
     isAuthenticated: boolean;
     onLogin: () => void;
@@ -32,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const [managementOpen, setManagementOpen] = useState(true);
     const [warehouseOpen, setWarehouseOpen] = useState(true);
     const [attendanceOpen, setAttendanceOpen] = useState(true);
+    const [rndOpen, setRndOpen] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     return (
@@ -112,6 +115,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 >
                                     <ContainerOutlined className="icon" />
                                     <span className="label">Check tồn kho</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="nav-group">
+                        <button
+                            className="nav-group-header"
+                            onClick={() => setRndOpen(!rndOpen)}
+                        >
+                            <span className="group-title">R & D</span>
+                            <span className="group-toggle">{rndOpen ? '▼' : '▶'}</span>
+                        </button>
+
+                        {rndOpen && (
+                            <div className="nav-group-items">
+                                <button
+                                    className={`nav-item ${currentView === 'figma2product' ? 'active' : ''}`}
+                                    onClick={() => onChangeView('figma2product')}
+                                >
+                                    <RocketOutlined className="icon" />
+                                    <span className="label">Figma2Product</span>
+                                </button>
+
+                                <button
+                                    className={`nav-item ${currentView === 'data-management' ? 'active' : ''}`}
+                                    onClick={() => onChangeView('data-management')}
+                                >
+                                    <DatabaseOutlined className="icon" />
+                                    <span className="label">Data Management</span>
                                 </button>
                             </div>
                         )}

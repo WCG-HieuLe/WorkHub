@@ -5,7 +5,7 @@ import {
     RightOutlined,
     ReloadOutlined
 } from '@ant-design/icons';
-import { ExternalLink, History } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useMsal } from '@azure/msal-react';
 import {
     getAccessToken,
@@ -13,10 +13,8 @@ import {
     fetchWarehouseLocationsForFilter,
     InventoryCheckItem,
     InventoryCheckPaginatedResponse,
-    WarehouseLocationOption,
-    InventoryProduct
+    WarehouseLocationOption
 } from '../../services/dataverse';
-import { InventoryHistoryModal } from './InventoryHistoryModal';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -36,10 +34,6 @@ export const InventoryCheck: React.FC = () => {
     // Filter states
     const [locations, setLocations] = useState<WarehouseLocationOption[]>([]);
     const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-
-    // Modal state
-    const [showHistoryModal, setShowHistoryModal] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
 
 
     // Debounce search
@@ -150,16 +144,6 @@ export const InventoryCheck: React.FC = () => {
         loadData();
     };
 
-    const handleHistoryClick = (item: InventoryCheckItem) => {
-        const productForModal: InventoryProduct = {
-            ...item,
-            crdfd_masp: item.productCode,
-            locationName: item.warehouseLocation
-        } as unknown as InventoryProduct;
-        setSelectedProduct(productForModal);
-        setShowHistoryModal(true);
-    };
-
     const renderPagination = () => {
         const pages: (number | string)[] = [];
 
@@ -260,17 +244,17 @@ export const InventoryCheck: React.FC = () => {
                     <tbody>
                         {loading && inventoryData.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="list-view-empty-state">
+                                <td colSpan={8} className="list-view-empty-state">
                                     <ReloadOutlined spin /> Đang tải dữ liệu...
                                 </td>
                             </tr>
                         ) : error ? (
                             <tr>
-                                <td colSpan={9} className="list-view-empty-state text-danger">{error}</td>
+                                <td colSpan={8} className="list-view-empty-state text-danger">{error}</td>
                             </tr>
                         ) : paginatedData.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="list-view-empty-state">Không tìm thấy sản phẩm nào</td>
+                                <td colSpan={8} className="list-view-empty-state">Không tìm thấy sản phẩm nào</td>
                             </tr>
                         ) : (
                             paginatedData.map((item) => (
@@ -297,13 +281,6 @@ export const InventoryCheck: React.FC = () => {
                                         >
                                             <ExternalLink size={16} />
                                         </a>
-                                        <button
-                                            onClick={() => handleHistoryClick(item)}
-                                            className="action-icon-btn"
-                                            title="Xem lịch sử biến động"
-                                        >
-                                            <History size={16} />
-                                        </button>
                                     </td>
                                 </tr>
                             ))
@@ -353,14 +330,6 @@ export const InventoryCheck: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            )}
-
-            {/* History Modal */}
-            {showHistoryModal && selectedProduct && (
-                <InventoryHistoryModal
-                    product={selectedProduct}
-                    onClose={() => setShowHistoryModal(false)}
-                />
             )}
         </div>
     );

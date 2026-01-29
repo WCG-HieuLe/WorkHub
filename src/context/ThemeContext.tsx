@@ -11,6 +11,8 @@ export interface CustomColors {
     bgHeader?: string;
     bgSidebar?: string;
     bgMainLayout?: string;
+    bgComponent?: string;
+    bgItem?: string;
     textPrimary?: string;
     textSecondary?: string;
     accentPrimary?: string;
@@ -74,6 +76,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             bgHeader: '--bg-header',
             bgSidebar: '--sidebar-bg',
             bgMainLayout: '--main-layout-bg',
+            bgComponent: '--component-bg',
+            bgItem: '--item-bg',
             textPrimary: '--text-primary',
             textSecondary: '--text-secondary',
             accentPrimary: '--accent-primary',

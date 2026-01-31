@@ -9,7 +9,7 @@ const tools = [
     },
     {
         name: 'Project Tracker',
-        url: 'https://project-tracker-573735243623.us-west1.run.app/',
+        url: 'https://wcg-hieule.github.io/Project-Tracker/',
         icon: <BarChart3 size={48} strokeWidth={1.5} />
     },
     {

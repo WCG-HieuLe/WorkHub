@@ -470,7 +470,11 @@ function calculateRegistrationWorkValue(
 
         case RegistrationType.LamViecTaiNha:
         case RegistrationType.CongTac:
-            // Đã tính trong giờ làm, không cộng thêm
+            // WFH và Công tác: cộng thêm giờ từ phiếu đã duyệt
+            // vì giờ làm từ chấm công có thể chưa đủ (VD: chấm công 4h + WFH 4h = 8h)
+            if (hours !== undefined && standardHours > 0) {
+                return (hours / standardHours) * maxWorkVal;
+            }
             return 0;
 
         case RegistrationType.NghiKhongLuong:

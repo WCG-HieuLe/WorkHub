@@ -3,7 +3,6 @@ import { DayRecord } from '../types/types';
 import {
     getDaysInMonth,
     getDayOfWeek,
-    getStandardHours,
     formatDate
 } from '../utils/workUtils';
 
@@ -54,7 +53,6 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({
         const dateStr = formatDate(year, month, day);
         const record = recordMap.get(dateStr);
         const dayOfWeek = getDayOfWeek(year, month, day);
-        const standardHours = getStandardHours(dayOfWeek);
         const date = new Date(year, month, day);
 
         let classes = ['calendar-day'];
@@ -76,7 +74,8 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({
                 classes.push('late');
             } else if (record.status === 'warning') {
                 classes.push('warning');
-            } else if (record.hoursWorked < standardHours) {
+            } else if (record.workValue < (dayOfWeek === 6 ? 0.5 : 1.0)) {
+                // Kiểm tra workValue thay vì hoursWorked để bao gồm phiếu đăng ký đã duyệt
                 classes.push('insufficient');
             } else {
                 classes.push('normal');

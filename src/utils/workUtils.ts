@@ -88,6 +88,15 @@ export function getInsufficientDays(
             return false;
         }
 
+        // Kiểm tra theo workValue để bao gồm cả phiếu đăng ký đã duyệt
+        // Nếu có phiếu đăng ký đã duyệt, workValue sẽ >= standardWorkValue
+        const standardWorkValue = getStandardWorkValue(dayOfWeek);
+
+        // Nếu workValue >= công chuẩn thì coi như đủ công
+        if (record.workValue >= standardWorkValue) {
+            return false;
+        }
+
         return record.hoursWorked < standardHours;
     });
 }

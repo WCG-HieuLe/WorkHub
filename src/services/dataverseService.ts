@@ -611,7 +611,11 @@ function transformToRecords(dataverseData: DataverseChamCong[]): DayRecord[] {
         // If hoursWorked >= standardHours (e.g. 4/4 or 8/8), it's full công for that day.
         // For summary, full work day (Mon-Fri) is 1.0, half day (Sat) is 0.5.
         let calculatedWorkValue = 0;
-        if (hoursWorked >= standardHours && standardHours > 0) {
+
+        // Ngày Lễ được tính đủ công (paid holiday)
+        if (status === 'holiday') {
+            calculatedWorkValue = (dayOfWeek === 6) ? 0.5 : 1.0;
+        } else if (hoursWorked >= standardHours && standardHours > 0) {
             calculatedWorkValue = (dayOfWeek === 6) ? 0.5 : 1.0;
         } else if (standardHours > 0) {
             // Partial công

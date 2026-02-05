@@ -28,7 +28,7 @@ async function fetchTimekeepingData(
     const res = await fetch(url, {
         headers: createFetchHeaders(accessToken),
     });
-    
+
     if (!res.ok) throw new Error("Failed to fetch timekeeping");
     const json = await res.json();
     return json.value as DataverseChamCong[];
@@ -103,7 +103,11 @@ function transformToRecords(dataverseData: DataverseChamCong[]): DayRecord[] {
         }
 
         let calculatedWorkValue = 0;
-        if (hoursWorked >= standardHours && standardHours > 0) {
+
+        // Ngày Lễ được tính đủ công (paid holiday)
+        if (status === 'holiday') {
+            calculatedWorkValue = (dayOfWeek === 6) ? 0.5 : 1.0;
+        } else if (hoursWorked >= standardHours && standardHours > 0) {
             calculatedWorkValue = (dayOfWeek === 6) ? 0.5 : 1.0;
         } else if (standardHours > 0) {
             const ratio = hoursWorked / standardHours;
@@ -173,6 +177,20 @@ function mergeTimekeepingAndRegistration(
                 });
             } else {
                 existing.registration = registrationInfo;
+
+                // Cộng thêm workValue từ phiếu đăng ký đã duyệt
+                // VD: Chấm công 4h + WFH 4h phiếu duyệt = đủ công
+                const dayOfWeek = d.getDay();
+                const regWorkVal = calculateRegistrationWorkValue(
+                    reg.crdfd_loaiangky,
+                    reg.crdfd_sogio2,
+                    dayOfWeek
+                );
+
+                // Cộng dồn nhưng không vượt quá công chuẩn
+                const maxWorkVal = (dayOfWeek === 6) ? 0.5 : 1.0;
+                existing.workValue = Math.min(existing.workValue + regWorkVal, maxWorkVal);
+
                 if (reg.crdfd_diengiai) {
                     existing.note = existing.note
                         ? `${existing.note} | DK: ${reg.crdfd_diengiai}`
@@ -248,6 +266,44 @@ function mapRegistrationToStatus(type: number, hours?: number): { status: DayRec
 }
 
 /**
+ * Tính workValue từ phiếu đăng ký đã duyệt
+ * Chỉ áp dụng cho các loại phiếu được tính công (nghỉ phép, WFH, công tác)
+ */
+function calculateRegistrationWorkValue(
+    type: number,
+    hours: number | undefined,
+    dayOfWeek: number
+): number {
+    const standardHours = getStandardHours(dayOfWeek);
+    const maxWorkVal = (dayOfWeek === 6) ? 0.5 : 1.0;
+
+    switch (type) {
+        case RegistrationType.NghiPhep:
+            // Nghỉ phép được tính công
+            if (hours !== undefined && standardHours > 0) {
+                return (hours / standardHours) * maxWorkVal;
+            }
+            return maxWorkVal;
+
+        case RegistrationType.LamViecTaiNha:
+        case RegistrationType.CongTac:
+            // WFH và Công tác: cộng thêm giờ từ phiếu đã duyệt
+            if (hours !== undefined && standardHours > 0) {
+                return (hours / standardHours) * maxWorkVal;
+            }
+            return 0;
+
+        case RegistrationType.NghiKhongLuong:
+        case RegistrationType.TangCa:
+            // Không tính vào công chuẩn
+            return 0;
+
+        default:
+            return 0;
+    }
+}
+
+/**
  * Fetch cham cong data (timekeeping + registrations merged)
  */
 export async function fetchChamCongData(
@@ -261,7 +317,7 @@ export async function fetchChamCongData(
     const startStrNext = formatDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1);
 
     const timekeepingPromise = fetchTimekeepingData(accessToken, startStr, startStrNext, employeeId);
-    const registrationPromise = employeeId 
+    const registrationPromise = employeeId
         ? fetchPhieuDangKyForMonth(accessToken, employeeId, startStr, startStrNext)
         : Promise.resolve([]);
 

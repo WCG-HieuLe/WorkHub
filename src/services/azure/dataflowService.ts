@@ -3,10 +3,9 @@
  * Fetches dataflows from Production environment
  */
 
-import { powerAppsConfig } from "@/config/authConfig";
+import { powerAppsConfig, PP_ENV_ID } from "@/config/authConfig";
 
-// Production environment ID
-const ENV_ID = "de210e4b-cd22-e605-91ca-8e841aad4b8e";
+// ── Types ──
 
 // ── Types ──
 
@@ -42,7 +41,7 @@ function parseOwner(raw: unknown): PADataflowOwner {
 // ── Fetch PA Dataflows ──
 
 export async function fetchPADataflows(accessToken: string): Promise<PADataflow[]> {
-    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${ENV_ID}/dataflows?api-version=2016-11-01`;
+    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${PP_ENV_ID}/dataflows?api-version=2016-11-01`;
 
     const response = await fetch(url, {
         headers: {
@@ -79,7 +78,7 @@ export async function fetchPADataflows(accessToken: string): Promise<PADataflow[
             lastModifiedTime: props.lastModifiedTime as string || '',
             status: props.status as string || props.lifeCycleId as string || 'Active',
             configuredBy: (props.configuredBy as string) || '',
-            environmentId: ENV_ID,
+            environmentId: PP_ENV_ID,
         } as PADataflow;
     });
 }

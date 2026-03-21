@@ -16,7 +16,8 @@ export const msalConfig = {
 
 export const dataverseConfig = {
     baseUrl: import.meta.env.VITE_DATAVERSE_URL || "https://wecare-ii.crm5.dynamics.com/api/data/v9.2",
-    scopes: ["https://wecare-ii.crm5.dynamics.com/.default"],
+    orgUrl: import.meta.env.VITE_DATAVERSE_ORG_URL || "",
+    scopes: [import.meta.env.VITE_DATAVERSE_SCOPE || "https://wecare-ii.crm5.dynamics.com/.default"],
 };
 
 export const azureManagementConfig = {
@@ -49,7 +50,12 @@ export const powerPlatformAdminConfig = {
     scopes: ["https://service.powerapps.com/User"],
 };
 
+// ── Sensitive IDs (from env vars) ──
+
+export const AZURE_SUBSCRIPTION_ID = import.meta.env.VITE_AZURE_SUBSCRIPTION_ID || "";
+export const PP_ENV_ID = import.meta.env.VITE_PP_ENV_ID || "";
+export const TENANT_ID = import.meta.env.VITE_TENANT_ID || "";
+
 // Tên nhân viên để filter
-export const EMPLOYEE_NAME = "Lê Hoàng Hiếu";
 export const EMPLOYEE_ID = import.meta.env.VITE_EMPLOYEE_ID || "";
 

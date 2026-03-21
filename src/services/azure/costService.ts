@@ -3,7 +3,7 @@
  * Fetches billing data: current spend, forecast, top resources
  */
 
-import { azureManagementConfig } from "@/config/authConfig";
+import { azureManagementConfig, AZURE_SUBSCRIPTION_ID } from "@/config/authConfig";
 
 /**
  * Fetch with retry for 429 rate limiting
@@ -23,8 +23,6 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3): P
     return fetch(url, options); // fallback
 }
 
-// Azure Subscription ID
-const SUBSCRIPTION_ID = "b230aef2-52a0-4800-8a8d-91a6880c86a2";
 
 interface CostRow {
     cost: number;
@@ -62,7 +60,7 @@ export async function fetchCurrentMonthCost(accessToken: string): Promise<{ tota
     const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    const url = `${azureManagementConfig.baseUrl}/subscriptions/${SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/query?api-version=2023-11-01`;
+    const url = `${azureManagementConfig.baseUrl}/subscriptions/${AZURE_SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/query?api-version=2023-11-01`;
 
     const body = {
         type: "ActualCost",
@@ -109,7 +107,7 @@ export async function fetchCurrentMonthCost(accessToken: string): Promise<{ tota
  * Fetch top N most expensive resources this month
  */
 export async function fetchTopResources(accessToken: string, top = 10): Promise<TopResource[]> {
-    const url = `${azureManagementConfig.baseUrl}/subscriptions/${SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/query?api-version=2023-11-01`;
+    const url = `${azureManagementConfig.baseUrl}/subscriptions/${AZURE_SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/query?api-version=2023-11-01`;
 
     const now = new Date();
     const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -167,7 +165,7 @@ export async function fetchCostForecast(accessToken: string): Promise<CostForeca
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     const lastDayStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
 
-    const url = `${azureManagementConfig.baseUrl}/subscriptions/${SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/forecast?api-version=2023-11-01`;
+    const url = `${azureManagementConfig.baseUrl}/subscriptions/${AZURE_SUBSCRIPTION_ID}/providers/Microsoft.CostManagement/forecast?api-version=2023-11-01`;
 
     const body = {
         type: "ActualCost",

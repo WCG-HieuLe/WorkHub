@@ -3,10 +3,9 @@
  * Fetches all canvas apps from Production environment
  */
 
-import { powerAppsConfig } from "@/config/authConfig";
+import { powerAppsConfig, PP_ENV_ID } from "@/config/authConfig";
 
-// Production environment ID
-const ENV_ID = "de210e4b-cd22-e605-91ca-8e841aad4b8e";
+// ── Types ──
 
 // ── Types ──
 
@@ -54,7 +53,7 @@ function parseUser(raw: unknown): CanvasAppUser {
 // ── Fetch Canvas Apps ──
 
 export async function fetchCanvasApps(accessToken: string): Promise<CanvasApp[]> {
-    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${ENV_ID}/apps?api-version=2016-11-01`;
+    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${PP_ENV_ID}/apps?api-version=2016-11-01`;
 
     const response = await fetch(url, {
         headers: {

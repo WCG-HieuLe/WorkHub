@@ -2,10 +2,10 @@
  * Registration (Phiếu đăng ký) services
  */
 
-import { dataverseConfig } from '../../config/authConfig';
+import { dataverseConfig } from '@/config/authConfig';
 import { createFetchHeaders, createFetchHeadersWithAnnotations } from './common';
 import { PhieuDangKy, TeamRegistration, ApprovalStatus } from './types';
-import { formatDate } from '../../utils/workUtils';
+import { formatDate } from '@/utils/workUtils';
 
 /**
  * Fetch Phieu Dang Ky for a specific month

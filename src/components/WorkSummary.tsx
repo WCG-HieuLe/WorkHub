@@ -1,5 +1,5 @@
 import React from 'react';
-import { MonthSummary, DayRecord } from '../types/types';
+import { MonthSummary, DayRecord } from '@/types/types';
 
 interface WorkSummaryProps {
     summary: MonthSummary;

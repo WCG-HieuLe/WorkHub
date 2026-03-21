@@ -22,6 +22,7 @@ import {
     // Compliance
     FileCheck, ClipboardCheck, BookOpen, UserCheck,
 } from 'lucide-react';
+import { PP_ENV_ID, TENANT_ID } from '@/config/authConfig';
 
 interface AdminLink {
     icon: React.ReactNode;
@@ -50,7 +51,7 @@ const managementSections: ManagementSection[] = [
             { icon: <Mail size={18} />, title: 'Exchange Admin', url: 'https://admin.exchange.microsoft.com/#/', description: 'Quản trị email Exchange' },
             { icon: <MessageSquare size={18} />, title: 'Teams Admin', url: 'https://admin.teams.microsoft.com/users', description: 'Quản lý người dùng Teams' },
             { icon: <FolderOpen size={18} />, title: 'SharePoint Admin', url: 'https://wecarei-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/home', description: 'Quản trị SharePoint Online' },
-            { icon: <Bot size={18} />, title: 'Copilot Studio', url: 'https://copilotstudio.microsoft.com/environments/de210e4b-cd22-e605-91ca-8e841aad4b8e/bots', description: 'Quản trị AI Copilots' },
+            { icon: <Bot size={18} />, title: 'Copilot Studio', url: `https://copilotstudio.microsoft.com/environments/${PP_ENV_ID}/bots`, description: 'Quản trị AI Copilots' },
             { icon: <Handshake size={18} />, title: 'MS Partner Center', url: 'https://partner.microsoft.com/dashboard/v2/account-settings/account-management/home', description: 'Cổng thông tin đối tác Microsoft' },
             { icon: <BarChart3 size={18} />, title: 'Power BI Admin', url: 'https://app.powerbi.com/admin-portal/tenantSettings?experience=fabric-developer&clientSideAuth=0', description: 'Quản trị Power BI / Fabric' },
             { icon: <Lock size={18} />, title: 'Azure Portal (AD)', url: 'https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview/query/wecare', description: 'Azure Active Directory' },
@@ -76,7 +77,7 @@ const managementSections: ManagementSection[] = [
         title: 'Logs & Audit',
         icon: <Shield size={18} />,
         links: [
-            { icon: <Shield size={18} />, title: 'MS Purview', url: 'https://purview.microsoft.com/home?tid=08dd70ab-ac3b-4a33-acd1-ef3fe1729e61', description: 'Quản lý tuân thủ, bảo mật dữ liệu' },
+            { icon: <Shield size={18} />, title: 'MS Purview', url: `https://purview.microsoft.com/home?tid=${TENANT_ID}`, description: 'Quản lý tuân thủ, bảo mật dữ liệu' },
             { icon: <Search size={18} />, title: 'Audit Logs', url: 'https://audit-log-viewer-573735243623.us-west1.run.app/', description: 'Xem audit logs hệ thống' },
             { icon: <KeyRound size={18} />, title: 'Entra Sign-in Logs', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/SignInEventsV3Blade', description: 'Azure AD sign-in history' },
             { icon: <Shield size={18} />, title: 'Entra Audit Logs', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuditLogsBlade', description: 'Azure AD audit trail' },

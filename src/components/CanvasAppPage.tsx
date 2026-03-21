@@ -8,9 +8,8 @@ import {
 import type { CanvasApp } from '@/services/azure/canvasAppService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchCanvasApps } from '@/services/azure/canvasAppService';
-import { powerAppsConfig } from '@/config/authConfig';
+import { powerAppsConfig, PP_ENV_ID } from '@/config/authConfig';
 
-const ENV_ID = 'de210e4b-cd22-e605-91ca-8e841aad4b8e';
 
 function formatDate(dateStr: string): string {
     if (!dateStr) return '—';
@@ -19,7 +18,7 @@ function formatDate(dateStr: string): string {
 }
 
 function getAppMakerUrl(appId: string): string {
-    return `https://make.powerapps.com/environments/${ENV_ID}/apps/${appId}/details`;
+    return `https://make.powerapps.com/environments/${PP_ENV_ID}/apps/${appId}/details`;
 }
 
 export const CanvasAppPage: React.FC = () => {

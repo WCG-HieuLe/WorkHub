@@ -4,7 +4,7 @@
  * NO additional scopes needed — uses existing Dataverse token
  */
 
-import { dataverseConfig } from "@/config/authConfig";
+import { dataverseConfig, PP_ENV_ID } from "@/config/authConfig";
 
 // ── Types ──
 
@@ -135,10 +135,6 @@ export async function fetchFlows(accessToken: string): Promise<{ flows: FlowDefi
     return { flows, total };
 }
 
-// ── Flow Run History (Power Automate Management API) ──
-
-const FLOW_ENV_ID = 'de210e4b-cd22-e605-91ca-8e841aad4b8e';
-
 export interface FlowRun {
     id: string;
     name: string;
@@ -151,7 +147,7 @@ export interface FlowRun {
 }
 
 export async function fetchFlowRuns(flowToken: string, flowId: string, top = 20): Promise<FlowRun[]> {
-    const url = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/scopes/admin/environments/${FLOW_ENV_ID}/flows/${flowId}/runs?api-version=2016-11-01&$top=${top}`;
+    const url = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/scopes/admin/environments/${PP_ENV_ID}/flows/${flowId}/runs?api-version=2016-11-01&$top=${top}`;
 
     const response = await fetch(url, {
         headers: {

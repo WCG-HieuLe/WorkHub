@@ -16,7 +16,7 @@ export const msalConfig = {
 
 export const dataverseConfig = {
     baseUrl: import.meta.env.VITE_DATAVERSE_URL || "https://wecare-ii.crm5.dynamics.com/api/data/v9.2",
-    orgUrl: import.meta.env.VITE_DATAVERSE_ORG_URL || "",
+    orgUrl: import.meta.env.VITE_DATAVERSE_ORG_URL || "https://wecare-ii.crm5.dynamics.com",
     scopes: [import.meta.env.VITE_DATAVERSE_SCOPE || "https://wecare-ii.crm5.dynamics.com/.default"],
 };
 
@@ -52,8 +52,8 @@ export const powerPlatformAdminConfig = {
 
 // ── Sensitive IDs (from env vars) ──
 
-export const AZURE_SUBSCRIPTION_ID = import.meta.env.VITE_AZURE_SUBSCRIPTION_ID || "";
-export const PP_ENV_ID = import.meta.env.VITE_PP_ENV_ID || "";
+export const AZURE_SUBSCRIPTION_ID = import.meta.env.VITE_AZURE_SUBSCRIPTION_ID || "b230aef2-52a0-4800-8a8d-91a6880c86a2";
+export const PP_ENV_ID = import.meta.env.VITE_PP_ENV_ID || "de210e4b-cd22-e605-91ca-8e841aad4b8e";
 export const TENANT_ID = import.meta.env.VITE_TENANT_ID || "";
 
 // Tên nhân viên để filter

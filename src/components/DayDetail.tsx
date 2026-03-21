@@ -1,15 +1,15 @@
 import { useState, useEffect, FC, Dispatch, SetStateAction } from 'react';
 import { useMsal } from '@azure/msal-react';
-import { DayRecord } from '../types/types';
-import { getStandardHours, getTimeFromISO, calculateActualHours } from '../utils/workUtils';
+import { DayRecord } from '@/types/types';
+import { getStandardHours, getTimeFromISO, calculateActualHours } from '@/utils/workUtils';
 import {
     RegistrationType,
     ApprovalStatus,
     createPhieuDangKy,
     getAccessToken,
     updateChamCongTime
-} from '../services/dataverse';
-import { HINH_THUC_MAP, DEFAULT_HINH_THUC, REGISTRATION_TYPES } from '../constants/registrationConstants';
+} from '@/services/dataverse';
+import { HINH_THUC_MAP, DEFAULT_HINH_THUC, REGISTRATION_TYPES } from '@/constants/registrationConstants';
 
 interface DayDetailProps {
     record: DayRecord | null;

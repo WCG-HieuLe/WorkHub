@@ -1,10 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { DayRecord } from '../types/types';
+import { DayRecord } from '@/types/types';
 import {
     getDaysInMonth,
     getDayOfWeek,
     formatDate
-} from '../utils/workUtils';
+} from '@/utils/workUtils';
 
 interface CalendarProps {
     year: number;

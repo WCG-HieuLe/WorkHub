@@ -1,227 +1,268 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AccountInfo } from '@azure/msal-browser';
 import {
-    SettingOutlined,
-    ToolOutlined,
-    BarChartOutlined,
-    InteractionOutlined,
-    ContainerOutlined,
-    CalendarOutlined,
-    FormOutlined,
-    AuditOutlined,
-    LoginOutlined,
-    RocketOutlined,
-    DatabaseOutlined
-} from '@ant-design/icons';
-import { Settings } from './Settings';
+    Home,
+    ChevronDown,
+    ChevronRight,
+    // Operations
+    Database,
+    BarChart3,
+    Factory,
+    Workflow,
+    Zap,
+    AppWindow,
+    // Dev Tools
+    Code,
+    // Settings
+    Settings,
+    Activity,
+    Globe,
+    HardDrive,
+    Server,
+    // Finance
+    Receipt,
+    KeyRound,
+    // Security & Compliance
+    Shield,
+    ScrollText,
+    ClipboardCheck,
+    AlertTriangle,
+    GitCommitHorizontal,
+    LogIn,
+    // Personal
+    Calendar,
+    FileText,
+    DollarSign,
+    // Other
+    PanelLeftClose,
+    PanelLeft,
+} from 'lucide-react';
+import { ROUTES } from '@/routes';
 
 interface SidebarProps {
-    currentView: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management';
-    onChangeView: (view: 'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management') => void;
     user: AccountInfo | null;
     isAuthenticated: boolean;
     onLogin: () => void;
     onLogout: () => void;
 }
 
+interface NavItem {
+    path: string;
+    label: string;
+    icon: React.ReactNode;
+}
+
+interface NavGroup {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+    {
+        id: 'operations',
+        label: 'Operations',
+        icon: <Activity size={16} />,
+        items: [
+            { path: ROUTES.MGMT_DATA, label: 'Data', icon: <Database size={16} /> },
+            { path: ROUTES.MGMT_REPORTS, label: 'Reports', icon: <BarChart3 size={16} /> },
+            { path: ROUTES.OPS_FABRIC, label: 'Fabric', icon: <Factory size={16} /> },
+            { path: ROUTES.OPS_DATAFLOW, label: 'Dataflow', icon: <Workflow size={16} /> },
+            { path: ROUTES.OPS_AUTOMATE, label: 'Automate Flow', icon: <Zap size={16} /> },
+            { path: ROUTES.OPS_CANVAS_APP, label: 'Canvas App', icon: <AppWindow size={16} /> },
+        ],
+    },
+    {
+        id: 'devtools',
+        label: 'Dev Tools',
+        icon: <Code size={16} />,
+        items: [
+            { path: ROUTES.MGMT_DEVTOOLS, label: 'Tools & Links', icon: <Code size={16} /> },
+        ],
+    },
+    {
+        id: 'settings',
+        label: 'Settings',
+        icon: <Settings size={16} />,
+        items: [
+            { path: ROUTES.MGMT_ADMIN, label: 'Admin', icon: <Settings size={16} /> },
+            { path: ROUTES.OPS_HEALTH, label: 'System Health', icon: <Activity size={16} /> },
+            { path: ROUTES.MGMT_ENVIRONMENT, label: 'Environment', icon: <Server size={16} /> },
+            { path: ROUTES.MGMT_DOMAINS, label: 'Domains', icon: <Globe size={16} /> },
+            { path: ROUTES.OPS_BACKUPS, label: 'Backups', icon: <HardDrive size={16} /> },
+        ],
+    },
+    {
+        id: 'finance',
+        label: 'Finance',
+        icon: <Receipt size={16} />,
+        items: [
+            { path: ROUTES.MGMT_BILLING, label: 'Billing', icon: <Receipt size={16} /> },
+            { path: ROUTES.MGMT_LICENSE, label: 'License', icon: <KeyRound size={16} /> },
+        ],
+    },
+    {
+        id: 'security',
+        label: 'Security & Compliance',
+        icon: <Shield size={16} />,
+        items: [
+            { path: ROUTES.MGMT_SECURITY, label: 'Security', icon: <Shield size={16} /> },
+            { path: ROUTES.MGMT_LOG, label: 'Audit Log', icon: <ScrollText size={16} /> },
+            { path: ROUTES.OPS_CHANGELOG, label: 'Change Log', icon: <GitCommitHorizontal size={16} /> },
+            { path: ROUTES.MGMT_SIGNIN_LOG, label: 'Sign-in Log', icon: <LogIn size={16} /> },
+            { path: ROUTES.OPS_INCIDENTS, label: 'Incidents', icon: <AlertTriangle size={16} /> },
+            { path: ROUTES.MGMT_COMPLIANCE, label: 'Compliance', icon: <ClipboardCheck size={16} /> },
+        ],
+    },
+    {
+        id: 'personal',
+        label: 'Personal',
+        icon: <Calendar size={16} />,
+        items: [
+            { path: ROUTES.PERSONAL_TIMESHEET, label: 'Timesheet', icon: <Calendar size={16} /> },
+            { path: ROUTES.PERSONAL_REGISTRATION, label: 'Registration', icon: <FileText size={16} /> },
+            { path: ROUTES.PERSONAL_PAYMENT, label: 'Payment Request', icon: <DollarSign size={16} /> },
+        ],
+    },
+];
+
+const SIDEBAR_COLLAPSED_KEY = 'workhub_sidebar_collapsed';
+const SIDEBAR_BREAKPOINT = 1280;
+
 export const Sidebar: React.FC<SidebarProps> = ({
-    currentView,
-    onChangeView,
-    user,
     isAuthenticated,
-    onLogin
+    onLogin,
 }) => {
-    const [managementOpen, setManagementOpen] = useState(true);
-    const [warehouseOpen, setWarehouseOpen] = useState(true);
-    const [attendanceOpen, setAttendanceOpen] = useState(true);
-    const [rndOpen, setRndOpen] = useState(true);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const [collapsed, setCollapsed] = useState(() => {
+        const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+        if (saved !== null) return saved === 'true';
+        return window.innerWidth < SIDEBAR_BREAKPOINT;
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < SIDEBAR_BREAKPOINT) setCollapsed(true);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        const handleCollapse = () => setCollapsed(true);
+        window.addEventListener('workhub:collapse-sidebar', handleCollapse);
+        return () => window.removeEventListener('workhub:collapse-sidebar', handleCollapse);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    }, [collapsed]);
+
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+        operations: true,
+        devtools: true,
+        settings: true,
+        finance: false,
+        security: false,
+        personal: false,
+    });
+
+    const toggleGroup = (groupId: string) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [groupId]: !prev[groupId],
+        }));
+    };
+
+    const isActive = (path: string) => location.pathname === path;
+
+    const isGroupActive = (group: NavGroup) => {
+        if (group.items) {
+            return group.items.some(item => isActive(item.path));
+        }
+        return false;
+    };
+
+    const renderNavItem = (item: NavItem, indent = false) => (
+        <button
+            key={item.path}
+            className={`nav-item ${indent ? 'sub' : ''} ${isActive(item.path) ? 'active' : ''}`}
+            onClick={() => navigate(item.path)}
+            title={collapsed ? item.label : undefined}
+        >
+            {item.icon}
+            {!collapsed && <span>{item.label}</span>}
+        </button>
+    );
 
     return (
-        <>
-            <aside className="sidebar">
-                <div className="sidebar-header">
-                    <div className="logo-container">
-                        <span className="logo-text">WorkHub</span>
+        <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+            <div className="sidebar-header">
+                {!collapsed && <span className="sidebar-logo">WorkHub</span>}
+                <button
+                    className="sidebar-collapse-btn"
+                    onClick={() => setCollapsed(!collapsed)}
+                    title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                    {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+                </button>
+            </div>
+
+            <nav className="sidebar-nav">
+                {/* Dashboard — flat item */}
+                <button
+                    className={`nav-item ${isActive(ROUTES.DASHBOARD) ? 'active' : ''}`}
+                    onClick={() => navigate(ROUTES.DASHBOARD)}
+                    title={collapsed ? 'Dashboard' : undefined}
+                >
+                    <Home size={16} className="nav-icon" />
+                    {!collapsed && <span>Dashboard</span>}
+                </button>
+
+                {/* Groups */}
+                {navGroups.map((group) => (
+                    <div key={group.id} className="nav-group">
+                        <button
+                            className={`nav-group-header ${isGroupActive(group) ? 'active' : ''}`}
+                            onClick={() => collapsed ? undefined : toggleGroup(group.id)}
+                        >
+                            {collapsed ? (
+                                group.icon
+                            ) : (
+                                <>
+                                    <span className="nav-group-label">
+                                        {group.icon}
+                                        <span>{group.label}</span>
+                                    </span>
+                                    {expandedGroups[group.id]
+                                        ? <ChevronDown size={14} />
+                                        : <ChevronRight size={14} />
+                                    }
+                                </>
+                            )}
+                        </button>
+
+                        {!collapsed && expandedGroups[group.id] && (
+                            <div className="nav-group-items">
+                                {group.items?.map((item) => renderNavItem(item, true))}
+                            </div>
+                        )}
                     </div>
-                    <button
-                        className="settings-toggle-btn"
-                        onClick={() => setIsSettingsOpen(true)}
-                        title="Cấu hình giao diện"
-                    >
-                        <SettingOutlined style={{ fontSize: 18 }} />
+                ))}
+            </nav>
+
+            <div className="sidebar-footer">
+                {!collapsed && <span className="sidebar-copyright">©2026 HieuLe</span>}
+                {!isAuthenticated && (
+                    <button className="sidebar-login-btn" onClick={onLogin} title="Đăng nhập">
+                        <LogIn size={16} />
                     </button>
-                </div>
-
-                <nav className="sidebar-nav">
-                    <div className="nav-group">
-                        <button
-                            className="nav-group-header"
-                            onClick={() => setManagementOpen(!managementOpen)}
-                        >
-                            <span className="group-title">Management</span>
-                            <span className="group-toggle">{managementOpen ? '▼' : '▶'}</span>
-                        </button>
-
-                        {managementOpen && (
-                            <div className="nav-group-items">
-                                <button
-                                    className={`nav-item ${currentView === 'management' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('management')}
-                                >
-                                    <SettingOutlined className="icon" />
-                                    <span className="label">Admin Page</span>
-                                </button>
-                                <button
-                                    className={`nav-item ${currentView === 'tools' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('tools')}
-                                >
-                                    <ToolOutlined className="icon" />
-                                    <span className="label">Tools</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-
-                    <div className="nav-group">
-                        <button
-                            className="nav-group-header"
-                            onClick={() => setWarehouseOpen(!warehouseOpen)}
-                        >
-                            <span className="group-title">Warehouse</span>
-                            <span className="group-toggle">{warehouseOpen ? '▼' : '▶'}</span>
-                        </button>
-
-                        {warehouseOpen && (
-                            <div className="nav-group-items">
-                                <button
-                                    className={`nav-item ${currentView === 'warehouse-tables' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('warehouse-tables')}
-                                >
-                                    <BarChartOutlined className="icon" />
-                                    <span className="label">Tables</span>
-                                </button>
-                                <button
-                                    className={`nav-item ${currentView === 'warehouse-flow' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('warehouse-flow')}
-                                >
-                                    <InteractionOutlined className="icon" />
-                                    <span className="label">Flow/Dataflow Monitor</span>
-                                </button>
-                                <button
-                                    className={`nav-item ${currentView === 'inventory-check' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('inventory-check')}
-                                >
-                                    <ContainerOutlined className="icon" />
-                                    <span className="label">Check tồn kho</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="nav-group">
-                        <button
-                            className="nav-group-header"
-                            onClick={() => setRndOpen(!rndOpen)}
-                        >
-                            <span className="group-title">R & D</span>
-                            <span className="group-toggle">{rndOpen ? '▼' : '▶'}</span>
-                        </button>
-
-                        {rndOpen && (
-                            <div className="nav-group-items">
-                                <button
-                                    className={`nav-item ${currentView === 'figma2product' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('figma2product')}
-                                >
-                                    <RocketOutlined className="icon" />
-                                    <span className="label">Figma2Product</span>
-                                </button>
-
-                                <button
-                                    className={`nav-item ${currentView === 'data-management' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('data-management')}
-                                >
-                                    <DatabaseOutlined className="icon" />
-                                    <span className="label">Data Management</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="nav-group">
-                        <button
-                            className="nav-group-header"
-                            onClick={() => setAttendanceOpen(!attendanceOpen)}
-                        >
-                            <span className="group-title">Attendance</span>
-                            <span className="group-toggle">{attendanceOpen ? '▼' : '▶'}</span>
-                        </button>
-
-                        {attendanceOpen && (
-                            <div className="nav-group-items">
-                                <button
-                                    className={`nav-item ${currentView === 'personal' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('personal')}
-                                >
-                                    <CalendarOutlined className="icon" />
-                                    <span className="label">TimeSheet</span>
-                                </button>
-
-                                <button
-                                    className={`nav-item ${currentView === 'team' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('team')}
-                                >
-                                    <FormOutlined className="icon" />
-                                    <span className="label">Adjustment Request</span>
-                                </button>
-
-                                <button
-                                    className={`nav-item ${currentView === 'audit' ? 'active' : ''}`}
-                                    onClick={() => onChangeView('audit')}
-                                >
-                                    <AuditOutlined className="icon" />
-                                    <span className="label">Change History</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </nav>
-
-                <div className="sidebar-footer">
-                    <div className="version-info">
-                        <span>@2026 HieuLe</span>
-                        {(!isAuthenticated || !user) && (
-                            <button className="login-btn-compact" onClick={onLogin} title="Đăng nhập">
-                                <LoginOutlined />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </aside>
-
-            {/* Settings Popup Overlay */}
-            {
-                isSettingsOpen && (
-                    <div className="settings-popup-overlay" onClick={() => setIsSettingsOpen(false)}>
-                        <div className="settings-popup-content" onClick={e => e.stopPropagation()}>
-                            <div className="settings-popup-header">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <SettingOutlined className="text-accent" style={{ fontSize: 20 }} />
-                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Cấu hình giao diện</h2>
-                                </div>
-                                <button className="close-popup-btn" onClick={() => setIsSettingsOpen(false)}>
-                                    &times;
-                                </button>
-                            </div>
-                            <div className="settings-popup-body">
-                                <Settings />
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-        </>
+                )}
+            </div>
+        </aside>
     );
 };

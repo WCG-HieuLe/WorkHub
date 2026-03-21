@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TeamRegistration, ApprovalStatus } from '../services/dataverse';
+import { TeamRegistration, ApprovalStatus } from '@/services/dataverse';
 
 interface LeaveStatsProps {
     registrations: TeamRegistration[];

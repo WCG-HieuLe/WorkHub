@@ -2,9 +2,9 @@
  * Timekeeping (Chấm công) services
  */
 
-import { dataverseConfig } from '../../config/authConfig';
-import { DayRecord } from '../../types/types';
-import { getStandardHours, formatDate } from '../../utils/workUtils';
+import { dataverseConfig } from '@/config/authConfig';
+import { DayRecord } from '@/types/types';
+import { getStandardHours, formatDate } from '@/utils/workUtils';
 import { createFetchHeaders } from './common';
 import { DataverseChamCong, PhieuDangKy, ApprovalStatus, RegistrationType } from './types';
 import { fetchPhieuDangKyForMonth } from './registrationService';

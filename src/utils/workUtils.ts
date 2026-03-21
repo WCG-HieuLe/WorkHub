@@ -1,4 +1,4 @@
-import { DayRecord, MonthSummary } from '../types/types';
+import { DayRecord, MonthSummary } from '@/types/types';
 
 /**
  * Lấy số ngày trong tháng

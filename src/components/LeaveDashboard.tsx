@@ -1,20 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
-import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus } from '../services/dataverse';
-import { LeaveDetailModal } from './LeaveDetailModal';
+import { toast } from 'sonner';
+import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus } from '@/services/dataverse';
+import { LeaveDetailModal } from '@/components/LeaveDetailModal';
 
 interface LeaveDashboardProps {
     employeeId: string | null;
     year: number;
     month: number;
+    defaultTab?: 'registration' | 'dntt';
 }
 
-export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year, month }) => {
+export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year, month, defaultTab = 'registration' }) => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'registration' | 'dntt'>('registration');
+    const [activeTab, setActiveTab] = useState<'registration' | 'dntt'>(defaultTab);
     const [registrations, setRegistrations] = useState<TeamRegistration[]>([]);
     const [dnttRecords, setDnttRecords] = useState<DNTTRecord[]>([]);
 
@@ -131,11 +133,11 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                 // Close modal
                 closeModal();
             } else {
-                alert('Cập nhật thất bại!');
+                toast.error('Cập nhật thất bại!');
             }
         } catch (e) {
             console.error('Error updating DNTT:', e);
-            alert('Đã xảy ra lỗi!');
+            toast.error('Đã xảy ra lỗi!');
         } finally {
             setUpdating(false);
         }

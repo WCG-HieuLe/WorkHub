@@ -15,9 +15,6 @@ export * from './registrationService';
 // DNTT services
 export * from './dnttService';
 
-// Warehouse services
-export * from './warehouseService';
-
 // Types and enums
 export * from './types';
 

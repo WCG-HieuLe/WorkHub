@@ -1,35 +1,80 @@
 import { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { InteractionStatus } from '@azure/msal-browser';
-import { RocketOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 
-import { Header } from './components/Header';
-import { Calendar } from './components/Calendar';
-import { Sidebar } from './components/Sidebar';
-import { DayDetail } from './components/DayDetail';
-import { WorkSummary } from './components/WorkSummary';
+import { Sidebar } from '@/components/Sidebar';
+import { Header } from '@/components/Header';
+import { Dashboard } from '@/components/Dashboard';
+import { Calendar } from '@/components/Calendar';
+import { DayDetail } from '@/components/DayDetail';
+import { WorkSummary } from '@/components/WorkSummary';
+import { ManagementView } from '@/components/ManagementView';
+import { PlaceholderPage } from '@/components/PlaceholderPage';
+import { BillingPage } from '@/components/BillingPage';
+import { LicensePage } from '@/components/LicensePage';
+import { ReportsPage } from '@/components/ReportsPage';
+import { SystemHealthPage } from '@/components/SystemHealthPage';
+import { LogsPage } from '@/components/LogsPage';
+import { SecurityPage } from '@/components/SecurityPage';
+import { DomainsPage } from '@/components/DomainsPage';
+import { DevToolsPage } from '@/components/DevToolsPage';
+import { DataPage } from '@/components/DataPage';
+import { BackupsPage } from '@/components/BackupsPage';
+import { DataflowPage } from '@/components/DataflowPage';
+import { FabricPage } from '@/components/FabricPage';
+import { AutomateFlowPage } from '@/components/AutomateFlowPage';
+import { CanvasAppPage } from '@/components/CanvasAppPage';
+import { EnvironmentPage } from '@/components/EnvironmentPage';
 
-// Lazy load route components
-const LeaveDashboard = lazy(() => import('./components/LeaveDashboard').then(m => ({ default: m.LeaveDashboard })));
-const AuditLogs = lazy(() => import('./components/AuditLogs').then(m => ({ default: m.AuditLogs })));
-const Management = lazy(() => import('./components/Management').then(m => ({ default: m.Management })));
-const Tools = lazy(() => import('./components/Tools').then(m => ({ default: m.Tools })));
-const WarehouseLayout = lazy(() => import('./components/Warehouse/WarehouseLayout').then(m => ({ default: m.WarehouseLayout })));
-const InventoryCheck = lazy(() => import('./components/Warehouse/InventoryCheck').then(m => ({ default: m.InventoryCheck })));
+import { ROUTE_META, ROUTE_TO_MGMT_SUBVIEW, ROUTES } from '@/routes';
 
-import { DayRecord, MonthSummary } from './types/types';
-import { calculateMonthSummary } from './utils/workUtils';
-import { fetchChamCongData, getAccessToken, fetchEmployeeIdFromSystemUser } from './services/dataverse';
-import { dataverseConfig } from './config/authConfig';
-import { ThemeProvider } from './context/ThemeContext';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import './index.css';
+// Lazy load heavy components
+const LeaveDashboard = lazy(() => import('@/components/LeaveDashboard').then(m => ({ default: m.LeaveDashboard })));
+
+import { DayRecord, MonthSummary } from '@/types/types';
+import { calculateMonthSummary } from '@/utils/workUtils';
+import { fetchChamCongData, getAccessToken, fetchEmployeeIdFromSystemUser } from '@/services/dataverse';
+import { dataverseConfig } from '@/config/authConfig';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import '@/index.css';
+
+import { Github } from 'lucide-react';
+
+const LoadingSpinner = () => (
+    <div className="loading-state">
+        <div className="spinner"></div>
+        <p>Đang tải...</p>
+    </div>
+);
+
+// ── Placeholder page configs ──
+
+const IncidentsPage = () => (
+    <PlaceholderPage title="Incidents" description="Log & track sự cố hệ thống." />
+);
+
+const ChangeLogPage = () => (
+    <PlaceholderPage
+        title="Change Log"
+        description="Theo dõi deployments — ai deploy gì, khi nào. 🚧 Đang phát triển — sẽ tích hợp GitHub API."
+        links={[
+            { icon: <Github size={18} />, title: 'GitHub Releases', url: 'https://github.com/orgs/WCG-HieuLe/repositories', description: 'Organization releases' },
+        ]}
+    />
+);
+
+const SignInLogPage = () => (
+    <PlaceholderPage title="Sign-in Log" description="Azure AD sign-in logs — theo dõi ai đăng nhập, từ đâu, khi nào. 🚧 Đang phát triển." />
+);
+
+
 
 function App() {
     const { instance, accounts, inProgress } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-
-    const [currentViewState, setCurrentViewState] = useState<'personal' | 'team' | 'audit' | 'management' | 'tools' | 'warehouse' | 'warehouse-tables' | 'warehouse-flow' | 'inventory-check' | 'figma2product' | 'data-management'>('personal');
+    const location = useLocation();
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
@@ -39,7 +84,7 @@ function App() {
     const [summary, setSummary] = useState<MonthSummary>({
         standardDays: 0,
         actualDays: 0,
-        insufficientDays: []
+        insufficientDays: [],
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -74,7 +119,7 @@ function App() {
                         setError('Không tìm thấy thông tin nhân viên trong Dataverse.');
                     }
                 } catch (e) {
-                    console.error("Error fetching employee ID:", e);
+                    console.error('Error fetching employee ID:', e);
                 }
             }
         };
@@ -136,171 +181,160 @@ function App() {
             date: selectedDate,
             hoursWorked: 0,
             status: 'normal',
-            workValue: 0
+            workValue: 0,
         } as DayRecord);
     }, [records, selectedDate]);
 
-    const getHeaderTitle = useMemo(() => {
-        switch (currentViewState) {
-            case 'personal': return 'TimeSheet';
-            case 'team': return 'Adjustment Request';
-            case 'audit': return 'Change History';
-            case 'management': return 'Admin Page';
-            case 'tools': return 'Tools';
-            case 'warehouse-tables': return 'Warehouse Tables';
-            case 'warehouse-flow': return 'Flow Monitor';
-            case 'warehouse': return 'Warehouse';
-            case 'inventory-check': return 'Check tồn kho';
-            case 'figma2product': return 'Figma2Product';
-            case 'data-management': return 'Data Management';
-            default: return 'WorkHub';
-        }
-    }, [currentViewState]);
+    // Derive header config from current route
+    const headerConfig = useMemo(() => {
+        const meta = ROUTE_META[location.pathname];
+        return meta || { title: 'WorkHub', showDateNav: false };
+    }, [location.pathname]);
 
-    return (
-        <ThemeProvider>
-            <ErrorBoundary>
-                <div className="app">
-                    <Sidebar
-                        currentView={currentViewState}
-                        onChangeView={setCurrentViewState}
-                        user={accounts[0] || null}
-                        isAuthenticated={isAuthenticated}
-                        onLogin={handleLogin}
-                        onLogout={handleLogout}
-                    />
+    // Get user display name from MSAL account
+    const userName = accounts[0]?.name || 'User';
 
-                    <div className="main-layout">
-                        <Header
+    // Timesheet page content
+    const TimesheetPage = () => (
+        <>
+            {error && (
+                <div className="error-banner">⚠️ {error}</div>
+            )}
+            {inProgress !== InteractionStatus.None && <LoadingSpinner />}
+            {!isAuthenticated && inProgress === InteractionStatus.None && (
+                <div className="empty-state">
+                    <h2>Welcome to WorkHub</h2>
+                    <p>Vui lòng đăng nhập để xem dữ liệu chấm công.</p>
+                </div>
+            )}
+            {isAuthenticated && !loading && (
+                <div className="content-grid">
+                    <div className="calendar-section">
+                        <Calendar
                             year={year}
                             month={month}
-                            onMonthChange={handleMonthChange}
-                            title={getHeaderTitle}
-                            showDateNav={currentViewState === 'personal' || currentViewState === 'team'}
+                            records={records}
+                            selectedDate={selectedDate}
+                            onSelectDate={handleSelectDate}
                         />
-
-                        {currentViewState === 'personal' ? (
-                            <>
-                                {error && (
-                                    <div className="error-banner error-message-container">
-                                        ⚠️ {error}
-                                    </div>
-                                )}
-
-                                <main className="main-content">
-                                    {inProgress !== InteractionStatus.None && (
-                                        <div className="loading-state">
-                                            <div className="spinner"></div>
-                                            <p>Đang xác thực...</p>
-                                        </div>
-                                    )}
-
-                                    {!isAuthenticated && inProgress === InteractionStatus.None && (
-                                        <div className="welcome-screen">
-                                            <h2>Welcome to WorkHub</h2>
-                                            <p>Vui lòng đăng nhập để xem dữ liệu chấm công của bạn.</p>
-                                        </div>
-                                    )}
-
-                                    {isAuthenticated && !loading && (
-                                        <div className="content-grid">
-                                            <div className="calendar-section">
-                                                <Calendar
-                                                    year={year}
-                                                    month={month}
-                                                    records={records}
-                                                    selectedDate={selectedDate}
-                                                    onSelectDate={handleSelectDate}
-                                                />
-                                            </div>
-
-                                            <div className="summary-section">
-                                                <WorkSummary
-                                                    summary={summary}
-                                                    year={year}
-                                                    month={month}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {loading && isAuthenticated && (
-                                        <div className="loading">
-                                            <div className="spinner"></div>
-                                            <p>Đang tải dữ liệu...</p>
-                                        </div>
-                                    )}
-                                </main>
-                            </>
-                        ) : currentViewState === 'team' ? (
-                            <div className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <LeaveDashboard employeeId={employeeId} year={year} month={month} />
-                                </Suspense>
-                            </div>
-                        ) : currentViewState === 'audit' ? (
-                            <main className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <AuditLogs />
-                                </Suspense>
-                            </main>
-                        ) : currentViewState === 'tools' ? (
-                            <div className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <Tools />
-                                </Suspense>
-                            </div>
-                        ) : currentViewState === 'inventory-check' ? (
-                            <div className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <InventoryCheck />
-                                </Suspense>
-                            </div>
-                        ) : currentViewState === 'warehouse' || currentViewState === 'warehouse-tables' || currentViewState === 'warehouse-flow' ? (
-                            <div className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <WarehouseLayout activeView={
-                                        currentViewState === 'warehouse-tables' ? 'tables' :
-                                            currentViewState === 'warehouse-flow' ? 'flow' : undefined
-                                    } />
-                                </Suspense>
-                            </div>
-                        ) : currentViewState === 'figma2product' ? (
-                            <div className="main-content">
-                                <div className="placeholder-view">
-                                    <RocketOutlined style={{ fontSize: 48, color: 'var(--accent-color)', marginBottom: 16 }} />
-                                    <h2>Figma2Product</h2>
-                                    <p style={{ color: 'var(--text-muted)' }}>Dự án đang phát triển...</p>
-                                </div>
-                            </div>
-                        ) : currentViewState === 'data-management' ? (
-                            <div className="main-content">
-                                <div className="placeholder-view">
-                                    <DatabaseOutlined style={{ fontSize: 48, color: 'var(--accent-color)', marginBottom: 16 }} />
-                                    <h2>Data Management</h2>
-                                    <p style={{ color: 'var(--text-muted)' }}>Dự án đang phát triển...</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="main-content">
-                                <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Đang tải...</p></div>}>
-                                    <Management />
-                                </Suspense>
-                            </div>
-                        )}
                     </div>
-
-                    {selectedRecord && (
-                        <DayDetail
-                            record={selectedRecord}
-                            onClose={() => setSelectedDate(null)}
-                            employeeId={employeeId}
-                            onSaveSuccess={loadData}
+                    <div className="summary-section">
+                        <WorkSummary
+                            summary={summary}
+                            year={year}
+                            month={month}
                         />
-                    )}
+                    </div>
                 </div>
-            </ErrorBoundary>
-        </ThemeProvider>
+            )}
+            {loading && isAuthenticated && <LoadingSpinner />}
+        </>
+    );
+
+    // Management page — derives sub-view from current route
+    const ManagementPage = () => {
+        const subView = ROUTE_TO_MGMT_SUBVIEW[location.pathname];
+        return <ManagementView activeSubView={subView} />;
+    };
+
+    // Leave page — derives tab from route
+    const LeavePage = ({ defaultTab }: { defaultTab: 'registration' | 'dntt' }) => (
+        <Suspense fallback={<LoadingSpinner />}>
+            <LeaveDashboard
+                employeeId={employeeId}
+                year={year}
+                month={month}
+                defaultTab={defaultTab}
+            />
+        </Suspense>
+    );
+
+    return (
+        <ErrorBoundary>
+            <div className="app">
+                <Sidebar
+                    user={accounts[0] || null}
+                    isAuthenticated={isAuthenticated}
+                    onLogin={handleLogin}
+                    onLogout={handleLogout}
+                />
+
+                <div className="main-layout">
+                    <Header
+                        year={year}
+                        month={month}
+                        onMonthChange={handleMonthChange}
+                        title={headerConfig.title}
+                        showDateNav={headerConfig.showDateNav}
+                    />
+
+                    <main className="main-content">
+                        <Routes>
+                            <Route path={ROUTES.DASHBOARD} element={<Dashboard userName={userName} />} />
+
+                            {/* Personal */}
+                            <Route path={ROUTES.PERSONAL_TIMESHEET} element={<TimesheetPage />} />
+                            <Route path={ROUTES.PERSONAL_REGISTRATION} element={<LeavePage defaultTab="registration" />} />
+                            <Route path={ROUTES.PERSONAL_PAYMENT} element={<LeavePage defaultTab="dntt" />} />
+
+                            {/* Operations */}
+                            <Route path={ROUTES.MGMT_DATA} element={<DataPage />} />
+                            <Route path={ROUTES.MGMT_REPORTS} element={<ReportsPage />} />
+                            <Route path={ROUTES.OPS_FABRIC} element={<FabricPage />} />
+                            <Route path={ROUTES.OPS_DATAFLOW} element={<DataflowPage />} />
+                            <Route path={ROUTES.OPS_AUTOMATE} element={<AutomateFlowPage />} />
+                            <Route path={ROUTES.OPS_CANVAS_APP} element={<CanvasAppPage />} />
+
+                            {/* Dev Tools */}
+                            <Route path={ROUTES.MGMT_DEVTOOLS} element={<DevToolsPage />} />
+
+                            {/* Settings */}
+                            <Route path={ROUTES.MGMT_ADMIN} element={<ManagementPage />} />
+                            <Route path={ROUTES.OPS_HEALTH} element={<SystemHealthPage />} />
+                            <Route path={ROUTES.MGMT_ENVIRONMENT} element={<EnvironmentPage />} />
+                            <Route path={ROUTES.MGMT_DOMAINS} element={<DomainsPage />} />
+                            <Route path={ROUTES.OPS_BACKUPS} element={<BackupsPage />} />
+
+                            {/* Finance */}
+                            <Route path={ROUTES.MGMT_BILLING} element={<BillingPage />} />
+                            <Route path={ROUTES.MGMT_LICENSE} element={<LicensePage />} />
+
+                            {/* Security & Compliance */}
+                            <Route path={ROUTES.MGMT_SECURITY} element={<SecurityPage />} />
+                            <Route path={ROUTES.MGMT_LOG} element={<LogsPage />} />
+                            <Route path={ROUTES.OPS_CHANGELOG} element={<ChangeLogPage />} />
+                            <Route path={ROUTES.MGMT_SIGNIN_LOG} element={<SignInLogPage />} />
+                            <Route path={ROUTES.OPS_INCIDENTS} element={<IncidentsPage />} />
+                            <Route path={ROUTES.MGMT_COMPLIANCE} element={<ManagementPage />} />
+
+                            {/* Fallback */}
+                            <Route path="*" element={<Dashboard userName={userName} />} />
+                        </Routes>
+                    </main>
+                </div>
+
+                {selectedRecord && (
+                    <DayDetail
+                        record={selectedRecord}
+                        onClose={() => setSelectedDate(null)}
+                        employeeId={employeeId}
+                        onSaveSuccess={loadData}
+                    />
+                )}
+
+                <Toaster
+                    theme="dark"
+                    position="bottom-right"
+                    toastOptions={{
+                        style: {
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-primary)',
+                        },
+                    }}
+                />
+            </div>
+        </ErrorBoundary>
     );
 }
 

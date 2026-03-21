@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TeamRegistration, updatePhieuDangKy, RegistrationType, ApprovalStatus, getAccessToken } from '../services/dataverse';
+import { TeamRegistration, updatePhieuDangKy, RegistrationType, ApprovalStatus, getAccessToken } from '@/services/dataverse';
 import { useMsal } from '@azure/msal-react';
 import { Save } from 'lucide-react';
 

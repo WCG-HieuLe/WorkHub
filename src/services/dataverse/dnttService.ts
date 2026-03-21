@@ -2,7 +2,7 @@
  * DNTT (Đề nghị thanh toán) services
  */
 
-import { dataverseConfig } from '../../config/authConfig';
+import { dataverseConfig } from '@/config/authConfig';
 import { createFetchHeadersWithAnnotations, createFetchHeaders } from './common';
 import { DNTTRecord } from './types';
 

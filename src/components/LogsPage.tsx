@@ -1,83 +1,222 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
-    FileText, Users, Shield, RefreshCw, AlertTriangle, CheckCircle,
-    XCircle, Clock, ExternalLink, Search, MapPin, ChevronLeft, ChevronRight,
+    FileText, AlertTriangle, RefreshCw, Search, Clock, Copy, Check,
+    ChevronLeft, ChevronRight, Filter, X, ChevronDown,
 } from 'lucide-react';
 import { acquireToken } from '@/services/azure/tokenService';
-import { fetchSignInLogs, fetchAuditEvents, SignInLog, AuditEvent } from '@/services/azure/auditService';
-import { graphConfig } from '@/config/authConfig';
-import { usePagination } from '@/hooks/usePagination';
+import { dataverseConfig } from '@/config/authConfig';
+import {
+    fetchDvAuditLogs, fetchAuditTables,
+    DvAuditLog, AuditFilterCriteria, TableOption, FetchAuditLogsResponse,
+    ACTION_OPTIONS,
+} from '@/services/azure/dvAuditService';
 
-type Tab = 'signins' | 'audit';
-const PAGE_SIZE = 20;
+// ── State management ──
+
+interface PageState { logs: DvAuditLog[]; nextLink: string | null }
+
+interface AppState {
+    pageHistory: PageState[];
+    totalCount: number;
+    currentPage: number;
+    hasSearched: boolean;
+    isLoading: boolean;
+    error: string | null;
+}
+
+type Action =
+    | { type: 'SEARCH_START' }
+    | { type: 'SEARCH_SUCCESS'; payload: FetchAuditLogsResponse }
+    | { type: 'SEARCH_FAILURE'; payload: string }
+    | { type: 'PAGE_CHANGE_START' }
+    | { type: 'NEXT_PAGE_SUCCESS'; payload: FetchAuditLogsResponse }
+    | { type: 'SET_PAGE'; payload: number }
+    | { type: 'PAGE_CHANGE_FAILURE'; payload: string };
+
+const initialState: AppState = {
+    pageHistory: [], totalCount: 0, currentPage: 1,
+    hasSearched: false, isLoading: false, error: null,
+};
+
+const reducer = (state: AppState, action: Action): AppState => {
+    switch (action.type) {
+        case 'SEARCH_START':
+            return { ...initialState, isLoading: true, hasSearched: true };
+        case 'SEARCH_SUCCESS':
+            return {
+                ...state, isLoading: false, error: null,
+                totalCount: action.payload.totalCount,
+                pageHistory: [{ logs: action.payload.logs, nextLink: action.payload.nextLink }],
+                currentPage: 1,
+            };
+        case 'SEARCH_FAILURE':
+            return { ...state, isLoading: false, error: action.payload };
+        case 'PAGE_CHANGE_START':
+            return { ...state, isLoading: true, error: null };
+        case 'NEXT_PAGE_SUCCESS':
+            return {
+                ...state, isLoading: false,
+                pageHistory: [...state.pageHistory, { logs: action.payload.logs, nextLink: action.payload.nextLink }],
+                currentPage: state.currentPage + 1,
+            };
+        case 'SET_PAGE':
+            return { ...state, currentPage: action.payload };
+        case 'PAGE_CHANGE_FAILURE':
+            return { ...state, isLoading: false, error: action.payload };
+        default: return state;
+    }
+};
+
+// ── Component ──
 
 export const LogsPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const [tab, setTab] = useState<Tab>('signins');
-    const [search, setSearch] = useState('');
+    const [state, dispatch] = useReducer(reducer, initialState);
+    const [filters, setFilters] = useState<AuditFilterCriteria>({
+        tableName: '',
+        action: 'ALL',
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        recordId: '',
+        pageSize: 50,
+    });
 
-    // Lazy-loaded data per tab
-    const [signIns, setSignIns] = useState<SignInLog[]>([]);
-    const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+    // Table list
+    const [tables, setTables] = useState<TableOption[]>([]);
+    const [tablesLoading, setTablesLoading] = useState(false);
+    const [tableDropdownOpen, setTableDropdownOpen] = useState(false);
+    const [tableSearch, setTableSearch] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const loadedTabs = useRef<Set<Tab>>(new Set());
+    // Page search (local filter on current page)
+    const [localSearch, setLocalSearch] = useState('');
 
-    const loadTab = useCallback(async (targetTab: Tab, force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && loadedTabs.current.has(targetTab)) return;
+    // Clipboard
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
-        setLoading(true);
-        setError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], graphConfig.scopes);
-            if (targetTab === 'signins') {
-                const data = await fetchSignInLogs(token, 50);
-                setSignIns(data);
-            } else {
-                const data = await fetchAuditEvents(token, 50);
-                setAuditEvents(data);
-            }
-            loadedTabs.current.add(targetTab);
-        } catch (e) {
-            console.error(`Audit ${targetTab} error:`, e);
-            setError(e instanceof Error ? e.message : 'Cannot load audit logs.');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
+    // ── Get token ──
+    const getToken = useCallback(async () => {
+        const account = accounts[0];
+        return acquireToken(instance, account, dataverseConfig.scopes);
+    }, [instance, accounts]);
 
+    // ── Load tables on mount ──
     useEffect(() => {
-        loadTab(tab);
-    }, [tab, loadTab]);
+        if (!isAuthenticated || accounts.length === 0) return;
+        let cancelled = false;
 
-    // Filtering
-    const filteredSignIns = signIns.filter(log => {
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
-        return log.userDisplayName?.toLowerCase().includes(q) || log.appDisplayName?.toLowerCase().includes(q) || log.ipAddress?.toLowerCase().includes(q);
+        const loadTables = async () => {
+            setTablesLoading(true);
+            try {
+                const token = await getToken();
+                const data = await fetchAuditTables(token);
+                if (!cancelled) {
+                    setTables(data);
+                    if (data.length > 0 && !data.some(t => t.logicalName === filters.tableName)) {
+                        setFilters(prev => ({ ...prev, tableName: data[0].logicalName }));
+                    } else if (data.length === 0) {
+                        setFilters(prev => ({ ...prev, tableName: '' }));
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load tables:', e);
+                if (!cancelled) setTables([]);
+            } finally {
+                if (!cancelled) setTablesLoading(false);
+            }
+        };
+
+        loadTables();
+        return () => { cancelled = true; };
+    }, [isAuthenticated, accounts, getToken]);
+
+    // ── Close dropdown on outside click ──
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setTableDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    // ── Search ──
+    const handleSearch = useCallback(async () => {
+        if (!isAuthenticated || accounts.length === 0) return;
+        dispatch({ type: 'SEARCH_START' });
+        try {
+            const token = await getToken();
+            const result = await fetchDvAuditLogs(token, filters, null);
+            dispatch({ type: 'SEARCH_SUCCESS', payload: result });
+        } catch (e) {
+            dispatch({ type: 'SEARCH_FAILURE', payload: e instanceof Error ? e.message : 'Failed to fetch audit logs.' });
+        }
+    }, [isAuthenticated, accounts, getToken, filters]);
+
+    // ── Pagination ──
+    const handlePageChange = useCallback(async (direction: 'next' | 'prev') => {
+        if (direction === 'prev') {
+            if (state.currentPage > 1) dispatch({ type: 'SET_PAGE', payload: state.currentPage - 1 });
+            return;
+        }
+
+        const totalPages = Math.ceil(state.totalCount / filters.pageSize);
+        if (state.currentPage >= totalPages) return;
+
+        const nextPageNum = state.currentPage + 1;
+        if (nextPageNum <= state.pageHistory.length) {
+            dispatch({ type: 'SET_PAGE', payload: nextPageNum });
+            return;
+        }
+
+        const currentPageData = state.pageHistory[state.currentPage - 1];
+        if (!currentPageData?.nextLink) return;
+
+        dispatch({ type: 'PAGE_CHANGE_START' });
+        try {
+            const token = await getToken();
+            const result = await fetchDvAuditLogs(token, filters, currentPageData.nextLink);
+            dispatch({ type: 'NEXT_PAGE_SUCCESS', payload: result });
+        } catch (e) {
+            dispatch({ type: 'PAGE_CHANGE_FAILURE', payload: e instanceof Error ? e.message : 'Failed to load next page.' });
+        }
+    }, [state, filters, getToken]);
+
+    // ── Copy record ID ──
+    const handleCopy = (logId: string, recordId: string) => {
+        navigator.clipboard.writeText(recordId);
+        setCopiedId(logId);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    // ── Derived ──
+    const currentLogs = state.pageHistory[state.currentPage - 1]?.logs ?? [];
+    const totalPages = state.totalCount > 0 ? Math.ceil(state.totalCount / filters.pageSize) : 0;
+    const selectedTable = tables.find(t => t.logicalName === filters.tableName);
+    const filteredTableOptions = tables.filter(t => t.displayName.toLowerCase().includes(tableSearch.toLowerCase()));
+
+    // Local search on current page changes
+    const displayLogs = currentLogs.filter(log => {
+        if (!localSearch.trim()) return true;
+        const q = localSearch.toLowerCase();
+        return log.user.name.toLowerCase().includes(q)
+            || log.tableName.toLowerCase().includes(q)
+            || log.changes?.toLowerCase().includes(q)
+            || log.action.toLowerCase().includes(q);
     });
 
-    const filteredAudit = auditEvents.filter(event => {
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
-        return event.activityDisplayName?.toLowerCase().includes(q) || event.category?.toLowerCase().includes(q);
-    });
-
-    // Pagination
-    const signInPagination = usePagination(filteredSignIns, PAGE_SIZE);
-    const auditPagination = usePagination(filteredAudit, PAGE_SIZE);
-
-    const successCount = signIns.filter(s => s.status?.errorCode === 0).length;
-    const failCount = signIns.filter(s => s.status?.errorCode !== 0).length;
-    const signInCount = loadedTabs.current.has('signins') ? signIns.length : '—';
-    const auditCount = loadedTabs.current.has('audit') ? auditEvents.length : '—';
-
-    const activePagination = tab === 'signins' ? signInPagination : auditPagination;
+    const getActionStyle = (action: string) => {
+        switch (action) {
+            case 'CREATE': return { color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' };
+            case 'UPDATE': return { color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' };
+            case 'DELETE': return { color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' };
+            default: return { color: '#71717a', background: 'rgba(113, 113, 122, 0.1)' };
+        }
+    };
 
     return (
         <div className="health-page">
@@ -85,186 +224,282 @@ export const LogsPage: React.FC = () => {
             <div className="billing-stats">
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
-                        <span className="billing-stat-label">Sign-ins</span>
-                        <div className="billing-stat-icon" style={{ color: '#a78bfa', background: 'rgba(167, 139, 250, 0.1)' }}><Users size={20} /></div>
+                        <span className="billing-stat-label">Total Records</span>
+                        <div className="billing-stat-icon" style={{ color: '#a78bfa', background: 'rgba(167, 139, 250, 0.1)' }}><FileText size={20} /></div>
                     </div>
-                    <span className="billing-stat-value">{loading && tab === 'signins' ? '...' : signInCount}</span>
+                    <span className="billing-stat-value">{state.hasSearched ? state.totalCount.toLocaleString() : '—'}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
-                        <span className="billing-stat-label">Successful</span>
-                        <div className="billing-stat-icon" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}><CheckCircle size={20} /></div>
+                        <span className="billing-stat-label">Current Page</span>
+                        <div className="billing-stat-icon" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}><Filter size={20} /></div>
                     </div>
-                    <span className="billing-stat-value">{loading && tab === 'signins' ? '...' : loadedTabs.current.has('signins') ? successCount : '—'}</span>
+                    <span className="billing-stat-value">{state.hasSearched ? `${state.currentPage}/${totalPages || 1}` : '—'}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
-                        <span className="billing-stat-label">Failed</span>
-                        <div className="billing-stat-icon" style={{ color: failCount > 0 ? '#ef4444' : '#10b981', background: failCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}><XCircle size={20} /></div>
+                        <span className="billing-stat-label">Tables Available</span>
+                        <div className="billing-stat-icon" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}><FileText size={20} /></div>
                     </div>
-                    <span className="billing-stat-value">{loading && tab === 'signins' ? '...' : loadedTabs.current.has('signins') ? failCount : '—'}</span>
+                    <span className="billing-stat-value">{tablesLoading ? '...' : tables.length}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
-                        <span className="billing-stat-label">Audit Events</span>
+                        <span className="billing-stat-label">Page Size</span>
                         <div className="billing-stat-icon" style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' }}><FileText size={20} /></div>
                     </div>
-                    <span className="billing-stat-value">{loading && tab === 'audit' ? '...' : auditCount}</span>
+                    <span className="billing-stat-value">{filters.pageSize}</span>
                 </div>
             </div>
 
             {/* Error */}
-            {error && (
+            {state.error && (
                 <div className="billing-error">
                     <AlertTriangle size={20} />
-                    <div><strong>Cannot load audit logs</strong><p>{error}</p></div>
-                    <button onClick={() => loadTab(tab, true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <div><strong>Cannot load audit logs</strong><p>{state.error}</p></div>
+                    <button onClick={handleSearch} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
-            {/* Tabs + Search */}
-            <div className="reports-header">
-                <div className="logs-tabs">
-                    <button className={`logs-tab ${tab === 'signins' ? 'active' : ''}`} onClick={() => setTab('signins')}>
-                        <Users size={14} /> Sign-in Logs ({signInCount})
-                    </button>
-                    <button className={`logs-tab ${tab === 'audit' ? 'active' : ''}`} onClick={() => setTab('audit')}>
-                        <Shield size={14} /> Audit Events ({auditCount})
-                    </button>
+            {/* Filter Bar */}
+            <div className="billing-section">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
+                    {/* Table (searchable dropdown) */}
+                    <div ref={dropdownRef} style={{ position: 'relative' }}>
+                        <label className="audit-filter-label">Table</label>
+                        <button
+                            type="button"
+                            onClick={() => setTableDropdownOpen(prev => !prev)}
+                            disabled={tablesLoading}
+                            className="audit-filter-select"
+                            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left' }}
+                        >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                {tablesLoading ? 'Loading...' : selectedTable?.displayName || 'Select table'}
+                            </span>
+                            <ChevronDown size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+                        </button>
+                        {tableDropdownOpen && !tablesLoading && (
+                            <div className="audit-table-dropdown">
+                                <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.06))' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Search tables..."
+                                        value={tableSearch}
+                                        onChange={e => setTableSearch(e.target.value)}
+                                        className="audit-filter-input"
+                                        autoFocus
+                                    />
+                                </div>
+                                <ul style={{ maxHeight: '200px', overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none' }}>
+                                    {filteredTableOptions.length > 0 ? filteredTableOptions.map(t => (
+                                        <li
+                                            key={t.logicalName}
+                                            onClick={() => {
+                                                setFilters(prev => ({ ...prev, tableName: t.logicalName }));
+                                                setTableDropdownOpen(false);
+                                                setTableSearch('');
+                                            }}
+                                            className="audit-table-dropdown-item"
+                                            style={{ fontWeight: filters.tableName === t.logicalName ? 600 : 400 }}
+                                        >
+                                            {t.displayName}
+                                        </li>
+                                    )) : (
+                                        <li style={{ padding: '0.5rem 0.75rem', opacity: 0.5, fontSize: '0.75rem' }}>No tables found.</li>
+                                    )}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action */}
+                    <div>
+                        <label className="audit-filter-label">Action</label>
+                        <select
+                            value={filters.action}
+                            onChange={e => setFilters(prev => ({ ...prev, action: e.target.value as AuditFilterCriteria['action'] }))}
+                            className="audit-filter-select"
+                        >
+                            {ACTION_OPTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Start Date */}
+                    <div>
+                        <label className="audit-filter-label">Start Date</label>
+                        <input
+                            type="date"
+                            value={filters.startDate}
+                            onChange={e => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                            className="audit-filter-input"
+                        />
+                    </div>
+
+                    {/* End Date */}
+                    <div>
+                        <label className="audit-filter-label">End Date</label>
+                        <input
+                            type="date"
+                            value={filters.endDate}
+                            onChange={e => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                            className="audit-filter-input"
+                        />
+                    </div>
+
+                    {/* Record ID */}
+                    <div>
+                        <label className="audit-filter-label">Record ID</label>
+                        <input
+                            type="text"
+                            placeholder="Optional GUID..."
+                            value={filters.recordId}
+                            onChange={e => setFilters(prev => ({ ...prev, recordId: e.target.value }))}
+                            className="audit-filter-input"
+                        />
+                    </div>
+
+                    {/* Page Size */}
+                    <div>
+                        <label className="audit-filter-label">Page Size</label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={1000}
+                            value={filters.pageSize}
+                            onChange={e => {
+                                const n = parseInt(e.target.value, 10);
+                                setFilters(prev => ({ ...prev, pageSize: isNaN(n) || n < 1 ? 50 : n }));
+                            }}
+                            className="audit-filter-input"
+                        />
+                    </div>
+
+                    {/* Search Button */}
+                    <div>
+                        <label className="audit-filter-label">&nbsp;</label>
+                        <button
+                            onClick={handleSearch}
+                            disabled={state.isLoading || tablesLoading || !filters.tableName}
+                            className="audit-search-btn"
+                        >
+                            {state.isLoading && state.pageHistory.length === 0
+                                ? <><RefreshCw size={14} className="spin" /> Searching...</>
+                                : <><Search size={14} /> Search</>
+                            }
+                        </button>
+                    </div>
                 </div>
-                <div className="reports-header-actions">
-                    {activePagination.totalPages > 1 && (
-                        <div className="pagination-bar">
-                            <button onClick={activePagination.prev} disabled={!activePagination.hasPrev} title="Previous page"><ChevronLeft size={14} /></button>
-                            <span className="pagination-info">{activePagination.page}/{activePagination.totalPages}</span>
-                            <button onClick={activePagination.next} disabled={!activePagination.hasNext} title="Next page"><ChevronRight size={14} /></button>
+            </div>
+
+            {/* Loading (initial search) */}
+            {state.isLoading && state.pageHistory.length === 0 && (
+                <div className="billing-loading"><div className="spinner"></div><p>Đang tải audit logs...</p></div>
+            )}
+
+            {/* Initial state */}
+            {!state.hasSearched && !state.isLoading && (
+                <div className="billing-loading" style={{ padding: '3rem' }}>
+                    <Search size={32} style={{ opacity: 0.2 }} />
+                    <p style={{ marginTop: '0.75rem', opacity: 0.5 }}>Chọn filters và nhấn Search để xem audit logs</p>
+                </div>
+            )}
+
+            {/* No results */}
+            {state.hasSearched && state.totalCount === 0 && !state.isLoading && (
+                <div className="billing-loading" style={{ padding: '3rem' }}>
+                    <FileText size={28} style={{ opacity: 0.2 }} />
+                    <p>Không tìm thấy audit logs. Hãy thử thay đổi filters.</p>
+                </div>
+            )}
+
+            {/* Data Table */}
+            {state.hasSearched && state.totalCount > 0 && (
+                <div className="billing-section">
+                    {/* Table header: local search + pagination */}
+                    <div className="reports-header">
+                        <div className="reports-search" style={{ width: 250 }}>
+                            <Search size={14} className="reports-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Filter on this page..."
+                                value={localSearch}
+                                onChange={e => setLocalSearch(e.target.value)}
+                                className="reports-search-input"
+                            />
+                            {localSearch && (
+                                <button onClick={() => setLocalSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.25rem' }}>
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="reports-header-actions">
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                                {((state.currentPage - 1) * filters.pageSize + 1).toLocaleString()}–{Math.min(state.currentPage * filters.pageSize, state.totalCount).toLocaleString()} of {state.totalCount.toLocaleString()}
+                            </span>
+                            {totalPages > 1 && (
+                                <div className="pagination-bar">
+                                    <button onClick={() => handlePageChange('prev')} disabled={state.currentPage <= 1 || state.isLoading} title="Previous page"><ChevronLeft size={14} /></button>
+                                    <span className="pagination-info">{state.currentPage}/{totalPages}</span>
+                                    <button onClick={() => handlePageChange('next')} disabled={state.currentPage >= totalPages || state.isLoading} title="Next page"><ChevronRight size={14} /></button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="billing-table-wrapper" style={{ opacity: state.isLoading ? 0.5 : 1 }}>
+                        <table className="billing-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Table</th>
+                                    <th>Action</th>
+                                    <th style={{ minWidth: '300px' }}>Changes</th>
+                                    <th style={{ width: '3rem', textAlign: 'center' }}>ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {displayLogs.map(log => (
+                                    <tr key={log.id}>
+                                        <td className="billing-table-type">
+                                            <Clock size={12} /> {log.timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="billing-table-name">{log.user.name}</td>
+                                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{log.tableName}</td>
+                                        <td>
+                                            <span className="license-status-badge" style={getActionStyle(log.action)}>{log.action}</span>
+                                        </td>
+                                        <td>
+                                            {log.action === 'UPDATE' && log.changes && log.changes !== 'N/A' ? (
+                                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.75rem', lineHeight: 1.5 }}>{log.changes}</pre>
+                                            ) : (
+                                                <span style={{ opacity: 0.4, fontSize: '0.75rem' }}>N/A</span>
+                                            )}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => handleCopy(log.id, log.recordId)}
+                                                title={`Copy: ${log.recordId}`}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.25rem' }}
+                                            >
+                                                {copiedId === log.id ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} style={{ opacity: 0.4 }} />}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {displayLogs.length === 0 && (
+                        <div className="billing-loading" style={{ padding: '2rem' }}>
+                            <p>{localSearch ? `Không tìm thấy "${localSearch}" trên trang này` : 'Không có dữ liệu'}</p>
                         </div>
                     )}
-                    <div className="reports-search" style={{ width: 200 }}>
-                        <Search size={14} className="reports-search-icon" />
-                        <input type="text" placeholder="Filter..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
-                    </div>
-                    <button onClick={() => loadTab(tab, true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
-                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Loading */}
-            {loading && (
-                <div className="billing-loading"><div className="spinner"></div><p>Đang tải {tab === 'signins' ? 'sign-in logs' : 'audit events'}...</p></div>
-            )}
-
-            {/* Sign-in Logs */}
-            {tab === 'signins' && !loading && loadedTabs.current.has('signins') && (
-                <div className="billing-section">
-                    <div className="billing-table-wrapper">
-                        <table className="billing-table">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Application</th>
-                                    <th>Status</th>
-                                    <th>IP / Location</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {signInPagination.items.map(log => {
-                                    const isSuccess = log.status?.errorCode === 0;
-                                    return (
-                                        <tr key={log.id}>
-                                            <td className="billing-table-name">{log.userDisplayName || log.userPrincipalName}</td>
-                                            <td>{log.appDisplayName || '—'}</td>
-                                            <td>
-                                                {isSuccess ? (
-                                                    <span className="license-status-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}><CheckCircle size={12} /> Success</span>
-                                                ) : (
-                                                    <span className="license-status-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }} title={log.status?.failureReason}><XCircle size={12} /> Failed</span>
-                                                )}
-                                            </td>
-                                            <td className="billing-table-type">
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                    <MapPin size={12} /> {log.ipAddress || '—'}{log.location?.countryOrRegion ? ` (${log.location.countryOrRegion})` : ''}
-                                                </span>
-                                            </td>
-                                            <td className="billing-table-type">
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                    <Clock size={12} /> {new Date(log.createdDateTime).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-
                 </div>
             )}
-
-            {/* Audit Events */}
-            {tab === 'audit' && !loading && loadedTabs.current.has('audit') && (
-                <div className="billing-section">
-                    <div className="billing-table-wrapper">
-                        <table className="billing-table">
-                            <thead>
-                                <tr>
-                                    <th>Activity</th>
-                                    <th>Category</th>
-                                    <th>Initiated By</th>
-                                    <th>Result</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {auditPagination.items.map(event => {
-                                    const initiator = event.initiatedBy?.user?.displayName || event.initiatedBy?.app?.displayName || '—';
-                                    const isSuccess = event.result === 'success';
-                                    return (
-                                        <tr key={event.id}>
-                                            <td className="billing-table-name">{event.activityDisplayName}</td>
-                                            <td>{event.category}</td>
-                                            <td>{initiator}</td>
-                                            <td>
-                                                <span className="license-status-badge" style={{
-                                                    color: isSuccess ? '#10b981' : '#ef4444',
-                                                    background: isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                }}>{event.result}</span>
-                                            </td>
-                                            <td className="billing-table-type">
-                                                {new Date(event.activityDateTime).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
-            )}
-
-            {/* Portal Links */}
-            <div className="billing-section">
-                <h3>Audit Portals</h3>
-                <div className="management-grid">
-                    {[
-                        { title: 'Entra Sign-in Logs', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/SignInLogsMenuBlade', description: 'Full sign-in log viewer' },
-                        { title: 'Entra Audit Logs', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuditLogsBlade', description: 'Directory audit events' },
-                    ].map(link => (
-                        <a key={link.title} href={link.url} target="_blank" rel="noopener noreferrer" className="management-card">
-                            <div className="management-card-content">
-                                <span className="management-card-icon"><FileText size={18} /></span>
-                                <div><h3>{link.title}</h3><p>{link.description}</p></div>
-                            </div>
-                            <span className="management-card-arrow-container">
-                                <ExternalLink size={14} className="management-card-arrow" />
-                            </span>
-                        </a>
-                    ))}
-                </div>
-            </div>
         </div>
     );
 };

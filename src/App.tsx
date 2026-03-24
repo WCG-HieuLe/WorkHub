@@ -92,7 +92,7 @@ function App() {
 
     const handleLogin = useCallback(async () => {
         try {
-            await instance.loginPopup({
+            await instance.loginRedirect({
                 scopes: dataverseConfig.scopes,
             });
         } catch (e) {
@@ -102,9 +102,18 @@ function App() {
     }, [instance]);
 
     const handleLogout = useCallback(() => {
-        instance.logoutPopup();
+        instance.logoutRedirect({
+            postLogoutRedirectUri: window.location.origin + (import.meta.env.BASE_URL || '/').replace(/\/+$/, ''),
+        });
         setEmployeeId(null);
     }, [instance]);
+
+    // Auto-login: redirect to Azure AD if not authenticated
+    useEffect(() => {
+        if (!isAuthenticated && inProgress === InteractionStatus.None) {
+            handleLogin();
+        }
+    }, [isAuthenticated, inProgress, handleLogin]);
 
     useEffect(() => {
         const fetchEmployeeId = async () => {
@@ -203,8 +212,8 @@ function App() {
             {inProgress !== InteractionStatus.None && <LoadingSpinner />}
             {!isAuthenticated && inProgress === InteractionStatus.None && (
                 <div className="empty-state">
-                    <h2>Welcome to WorkHub</h2>
-                    <p>Vui lòng đăng nhập để xem dữ liệu chấm công.</p>
+                    <h2>Đang chuyển hướng đăng nhập...</h2>
+                    <p>Bạn sẽ được chuyển đến Azure AD.</p>
                 </div>
             )}
             {isAuthenticated && !loading && (

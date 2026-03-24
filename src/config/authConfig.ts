@@ -5,9 +5,10 @@ export const msalConfig = {
     auth: {
         clientId: import.meta.env.VITE_CLIENT_ID || "",
         authority: import.meta.env.VITE_AUTHORITY || "https://login.microsoftonline.com/common",
+        redirectUri: window.location.origin + (import.meta.env.BASE_URL || '/').replace(/\/+$/, ''),
     },
     cache: {
-        cacheLocation: "sessionStorage" as const,
+        cacheLocation: "localStorage" as const,
         storeAuthStateInCookie: false,
     },
 };

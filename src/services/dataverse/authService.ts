@@ -13,11 +13,22 @@ export async function getAccessToken(
     instance: IPublicClientApplication,
     account: AccountInfo
 ): Promise<string> {
-    const response = await instance.acquireTokenSilent({
-        scopes: dataverseConfig.scopes,
-        account: account,
-    });
-    return response.accessToken;
+    try {
+        const response = await instance.acquireTokenSilent({
+            scopes: dataverseConfig.scopes,
+            account: account,
+        });
+        return response.accessToken;
+    } catch (e) {
+        console.warn("acquireTokenSilent failed, falling back to redirect:", e);
+        // Fallback: redirect to acquire token interactively
+        await instance.acquireTokenRedirect({
+            scopes: dataverseConfig.scopes,
+            account: account,
+        });
+        // After redirect, the page will reload and acquireTokenSilent should work
+        throw new Error("Redirecting for token acquisition...");
+    }
 }
 
 /**

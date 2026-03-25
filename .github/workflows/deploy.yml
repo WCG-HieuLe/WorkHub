@@ -37,6 +37,11 @@ jobs:
           VITE_CLIENT_ID: ${{ secrets.VITE_CLIENT_ID }}
           VITE_AUTHORITY: ${{ secrets.VITE_AUTHORITY }}
           VITE_TENANT_ID: ${{ secrets.VITE_TENANT_ID }}
+          VITE_DATAVERSE_URL: ${{ secrets.VITE_DATAVERSE_URL }}
+          VITE_DATAVERSE_ORG_URL: ${{ secrets.VITE_DATAVERSE_ORG_URL }}
+          VITE_DATAVERSE_SCOPE: ${{ secrets.VITE_DATAVERSE_SCOPE }}
+          VITE_AZURE_SUBSCRIPTION_ID: ${{ secrets.VITE_AZURE_SUBSCRIPTION_ID }}
+          VITE_PP_ENV_ID: ${{ secrets.VITE_PP_ENV_ID }}
 
       - name: Create .nojekyll to bypass Jekyll processing
         run: touch ./dist/.nojekyll

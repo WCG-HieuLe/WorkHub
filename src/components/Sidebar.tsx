@@ -164,18 +164,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
         operations: true,
-        devtools: true,
-        settings: true,
+        devtools: false,
+        settings: false,
         finance: false,
         security: false,
         personal: false,
     });
 
     const toggleGroup = (groupId: string) => {
-        setExpandedGroups(prev => ({
-            ...prev,
-            [groupId]: !prev[groupId],
-        }));
+        setExpandedGroups(prev => {
+            // Accordion: if already open, close it; otherwise open only this one
+            if (prev[groupId]) return { ...Object.fromEntries(Object.keys(prev).map(k => [k, false])) };
+            return Object.fromEntries(Object.keys(prev).map(k => [k, k === groupId]));
+        });
     };
 
     const isActive = (path: string) => location.pathname === path;

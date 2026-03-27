@@ -144,6 +144,7 @@ export interface FlowRun {
     errorCode: string;
     errorMessage: string;
     trigger: string;
+    triggerOutputsLink: string;  // SAS URL to fetch trigger output body
 }
 
 export async function fetchFlowRuns(flowToken: string, flowId: string, top = 20): Promise<FlowRun[]> {
@@ -166,6 +167,7 @@ export async function fetchFlowRuns(flowToken: string, flowId: string, top = 20)
         const props = run.properties as Record<string, unknown> || {};
         const trigger = props.trigger as Record<string, unknown> || {};
         const triggerName = trigger.name as string || '';
+        const outputsLink = (trigger.outputsLink as Record<string, unknown>)?.uri as string || '';
         const startTime = props.startTime as string || '';
         const endTime = props.endTime as string || '';
         const status = props.status as string || '';
@@ -180,8 +182,28 @@ export async function fetchFlowRuns(flowToken: string, flowId: string, top = 20)
             errorCode: error?.code || '',
             errorMessage: error?.message || '',
             trigger: triggerName,
+            triggerOutputsLink: outputsLink,
         };
     });
+}
+
+/**
+ * Fetch trigger output body from a SAS URL (returned in run.triggerOutputsLink).
+ * The SAS URL is self-authenticated, no Bearer token needed.
+ */
+export async function fetchFlowRunTriggerOutput(sasUrl: string): Promise<Record<string, unknown> | null> {
+    if (!sasUrl) return null;
+    try {
+        const response = await fetch(sasUrl, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) {
+            console.warn('[TriggerOutput] fetch failed:', response.status);
+            return null;
+        }
+        return await response.json();
+    } catch (err) {
+        console.warn('[TriggerOutput] error:', err);
+        return null;
+    }
 }
 
 export async function fetchEnvironments(envToken: string): Promise<PPEnvironment[]> {

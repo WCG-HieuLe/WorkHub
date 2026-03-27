@@ -3,14 +3,12 @@ import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Workflow, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, ChevronDown, ChevronRight,
-    Layers, Factory, Clock, Users, ExternalLink, History,
+    Layers, Factory, Clock, Users, ExternalLink, History, Database,
 } from 'lucide-react';
-import type { Dataflow, FabricItem, FabricWorkspace, FabricDataflowTransaction, FabricRefreshSchedule } from '@/services/azure/dataService';
-import { fetchDataflows, fetchFabricWorkspaces, fetchFabricItems, fetchDataflowTransactions, fetchDataflowRefreshSchedule } from '@/services/azure/dataService';
-import type { FlowRun } from '@/services/azure/powerPlatformService';
-import { fetchFlowRuns } from '@/services/azure/powerPlatformService';
+import type { Dataflow, FabricItem, FabricWorkspace, FabricDataflowTransaction, FabricRefreshSchedule, DataflowRefreshRun } from '@/services/azure/dataService';
+import { fetchDataflows, fetchFabricWorkspaces, fetchFabricItems, fetchDataflowTransactions, fetchDataflowRefreshSchedule, fetchDataflowRefreshHistory } from '@/services/azure/dataService';
 import { acquireToken } from '@/services/azure/tokenService';
-import { dataverseConfig, powerBIConfig, powerAutomateConfig } from '@/config/authConfig';
+import { dataverseConfig, powerBIConfig } from '@/config/authConfig';
 import { getCache, setCache, clearCache } from '@/services/cache';
 
 type TabKey = 'pa' | 'fabric';
@@ -60,7 +58,7 @@ export const DataflowPage: React.FC = () => {
 
     // ── History popup state (center modal) ──
     const [historyName, setHistoryName] = useState('');
-    const [historyRuns, setHistoryRuns] = useState<FlowRun[]>([]);
+    const [historyRuns, setHistoryRuns] = useState<DataflowRefreshRun[]>([]);
     const [historyTransactions, setHistoryTransactions] = useState<FabricDataflowTransaction[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [historyType, setHistoryType] = useState<'pa' | 'fabric' | null>(null);
@@ -116,7 +114,7 @@ export const DataflowPage: React.FC = () => {
         else loadFabric();
     }, [activeTab, loadPA, loadFabric]);
 
-    // ── Open PA History popup (lazy load) ──
+    // ── Open PA History popup (lazy load from Dataverse msdyn_refreshhistory) ──
     const openPAHistory = useCallback(async (df: Dataflow) => {
         setHistoryName(df.name);
         setHistoryType('pa');
@@ -124,11 +122,11 @@ export const DataflowPage: React.FC = () => {
         setHistoryTransactions([]);
         setHistoryLoading(true);
         try {
-            const token = await acquireToken(instance, accounts[0], powerAutomateConfig.scopes);
-            const runs = await fetchFlowRuns(token, df.id);
+            const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
+            const runs = await fetchDataflowRefreshHistory(token, df.id);
             setHistoryRuns(runs);
         } catch (e) {
-            console.warn('Failed to load PA flow runs:', e);
+            console.warn('Failed to load PA dataflow refresh history:', e);
         } finally {
             setHistoryLoading(false);
         }
@@ -169,8 +167,10 @@ export const DataflowPage: React.FC = () => {
     const closeHistory = () => { setHistoryType(null); };
 
     const toggleGroup = (key: string) => {
-        setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+        setExpandedGroups(prev => prev[key] ? {} : { [key]: true });
     };
+
+
 
     // ── PA grouped by owner ──
     const paGroups = useMemo(() => {
@@ -178,7 +178,8 @@ export const DataflowPage: React.FC = () => {
             ? paDataflows.filter(df =>
                 df.id.toLowerCase().includes(paSearch.toLowerCase()) ||
                 df.name.toLowerCase().includes(paSearch.toLowerCase()) ||
-                df.owner.toLowerCase().includes(paSearch.toLowerCase())
+                df.owner.toLowerCase().includes(paSearch.toLowerCase()) ||
+                df.entityNames.some(e => e.toLowerCase().includes(paSearch.toLowerCase()))
             )
             : paDataflows;
         const map = new Map<string, Dataflow[]>();
@@ -216,6 +217,17 @@ export const DataflowPage: React.FC = () => {
 
     // ── Active tab helpers ──
     const isPA = activeTab === 'pa';
+
+    // Auto-open 'Operation' group by default
+    useEffect(() => {
+        if (Object.keys(expandedGroups).length > 0) return;
+        const groups = isPA ? paGroups : fabricGroups;
+        if (groups.length === 0) return;
+        const opGroup = groups.find(([name]) => name.toLowerCase().includes('operation'));
+        if (opGroup) setExpandedGroups({ [opGroup[0]]: true });
+        else setExpandedGroups({ [groups[0][0]]: true });
+    }, [paGroups, fabricGroups, isPA]);
+
     const loading = isPA ? paLoading : fabricLoading;
     const loaded = isPA ? paLoaded || paDataflows.length > 0 : fabricLoaded || fabricDataflows.length > 0;
     const error = isPA ? paError : fabricError;
@@ -311,11 +323,28 @@ export const DataflowPage: React.FC = () => {
                                 {expandedGroups[owner] && (
                                     <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
                                         <table className="billing-table">
-                                            <thead><tr><th>Name</th><th>Status</th><th>Created By</th><th>Modified By</th><th>Created On</th><th>Last Modified</th><th style={{ width: 36 }}></th></tr></thead>
+                                            <thead><tr><th>Name</th><th>Entities</th><th>Status</th><th>Created By</th><th>Modified By</th><th>Created On</th><th>Last Modified</th><th style={{ width: 36 }}></th></tr></thead>
                                             <tbody>
                                                 {items.map(df => (
                                                     <tr key={df.id} className="clickable-row" onClick={() => setSelectedPA(df)}>
                                                         <td className="billing-table-name">{df.name}</td>
+                                                        <td style={{ fontSize: '11px', maxWidth: 200 }}>
+                                                            {df.entityNames.length > 0 ? (
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                                                    {df.entityNames.map(e => (
+                                                                        <span key={e} style={{
+                                                                            fontSize: '10px',
+                                                                            padding: '1px 6px',
+                                                                            borderRadius: '4px',
+                                                                            background: 'rgba(167,139,250,0.1)',
+                                                                            color: '#a78bfa',
+                                                                            border: '1px solid rgba(167,139,250,0.15)',
+                                                                            whiteSpace: 'nowrap',
+                                                                        }}>{e}</span>
+                                                                    ))}
+                                                                </div>
+                                                            ) : '—'}
+                                                        </td>
                                                         <td>
                                                             <span className="status-badge" style={{
                                                                 color: (df.state === 'Activated' || df.state === 'Active') ? '#10b981' : '#f59e0b',
@@ -466,18 +495,12 @@ export const DataflowPage: React.FC = () => {
                                     </a>
                                 </div>
                                 <div className="detail-meta-grid">
-                                    <div className="detail-meta-item"><div className="meta-label">Name</div><div className="meta-value">{selectedFabric.name}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFabric.id}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Workspace</div><div className="meta-value">{selectedFabric.workspaceName}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Configured By</div><div className="meta-value">{selectedFabric.configuredBy || '—'}</div></div>
+
                                     <div className="detail-meta-item"><div className="meta-label">Modified By</div><div className="meta-value">{selectedFabric.modifiedBy || '—'}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Modified</div><div className="meta-value">{formatDateTime(selectedFabric.modifiedDateTime)}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Refreshable</div><div className="meta-value">
-                                        {selectedFabric.isRefreshable
-                                            ? <span className="status-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><CheckCircle size={12} /> Yes</span>
-                                            : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.1)' }}><XCircle size={12} /> No</span>
-                                        }
-                                    </div></div>
+
                                     {selectedFabric.modelUrl && (
                                         <div className="detail-meta-item"><div className="meta-label">Model URL</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFabric.modelUrl}</div></div>
                                     )}
@@ -489,6 +512,45 @@ export const DataflowPage: React.FC = () => {
                                 <div className="detail-section">
                                     <div className="detail-section-title">Description</div>
                                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{selectedFabric.description}</p>
+                                </div>
+                            )}
+
+                            {/* Data Sources */}
+                            {selectedFabric.datasourceUsages?.length > 0 && (
+                                <div className="detail-section">
+                                    <div className="detail-section-title"><Database size={12} style={{ display: 'inline', marginRight: 4 }} />Data Sources ({selectedFabric.datasourceUsages.length})</div>
+                                    <div className="detail-meta-grid">
+                                        {selectedFabric.datasourceUsages.map((ds, i) => (
+                                            <div key={i} className="detail-meta-item" style={{ gridColumn: '1 / -1' }}>
+                                                <div className="meta-label">{ds.datasourceType || 'Unknown'}</div>
+                                                <div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                                                    {Object.entries(ds.connectionDetails).map(([k, v]) => (
+                                                        <div key={k}><span style={{ color: 'var(--text-muted)' }}>{k}:</span> {v}</div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Upstream Dataflows */}
+                            {selectedFabric.upstreamDataflows?.length > 0 && (
+                                <div className="detail-section">
+                                    <div className="detail-section-title"><Workflow size={12} style={{ display: 'inline', marginRight: 4 }} />Upstream Dataflows ({selectedFabric.upstreamDataflows.length})</div>
+                                    <div className="detail-meta-grid">
+                                        {selectedFabric.upstreamDataflows.map((ud, i) => {
+                                            const upstream = fabricDataflows.find(df => df.id === ud.targetDataflowId);
+                                            return (
+                                                <div key={i} className="detail-meta-item" style={{ gridColumn: '1 / -1' }}>
+                                                    <div className="meta-label">Depends on</div>
+                                                    <div className="meta-value" style={{ fontSize: '11px' }}>
+                                                        {upstream ? upstream.name : ud.targetDataflowId}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
 
@@ -558,11 +620,11 @@ export const DataflowPage: React.FC = () => {
                                     <div className="billing-table-wrapper">
                                         <table className="billing-table">
                                             <thead>
-                                                <tr><th>Status</th><th>Trigger</th><th>Started</th><th>Duration</th></tr>
+                                                <tr><th>Status</th><th>Trigger</th><th>Entity</th><th>Started</th><th>Duration</th><th>Rows</th><th>Inserted</th></tr>
                                             </thead>
                                             <tbody>
                                                 {historyRuns.map(run => {
-                                                    const isOk = run.status === 'Succeeded';
+                                                    const isOk = run.status === 'Success' || run.status === 'Succeeded';
                                                     const isFail = ['Failed', 'Faulted', 'TimedOut', 'Aborted'].includes(run.status);
                                                     const duration = run.startedOn && run.completedOn
                                                         ? (() => {
@@ -584,8 +646,11 @@ export const DataflowPage: React.FC = () => {
                                                                 </span>
                                                             </td>
                                                             <td style={{ fontSize: '11px' }}>{run.trigger || '—'}</td>
+                                                            <td style={{ fontSize: '11px' }}>{run.entityName || '—'}</td>
                                                             <td style={{ fontSize: '11px' }}>{formatDateTime(run.startedOn)}</td>
                                                             <td style={{ fontSize: '11px' }}>{duration}</td>
+                                                            <td style={{ fontSize: '11px' }}>{run.rowsRead > 0 ? run.rowsRead.toLocaleString() : '—'}</td>
+                                                            <td style={{ fontSize: '11px' }}>{run.insertCount > 0 ? run.insertCount.toLocaleString() : '—'}</td>
                                                         </tr>
                                                     );
                                                 })}

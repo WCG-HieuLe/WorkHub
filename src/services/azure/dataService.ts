@@ -18,6 +18,7 @@ export interface Dataflow {
     category: string;
     createdBy: string;
     modifiedBy: string;
+    entityNames: string[];  // Unique entity/query names from refresh history
 }
 
 export interface FabricWorkspace {
@@ -42,6 +43,17 @@ export interface FabricDataflowTransaction {
     status: string;
 }
 
+export interface FabricDatasourceUsage {
+    datasourceInstanceId: string;
+    datasourceType: string;
+    connectionDetails: Record<string, string>;
+}
+
+export interface FabricUpstreamDataflow {
+    targetDataflowId: string;
+    groupId: string;
+}
+
 export interface FabricItem {
     id: string;
     name: string;
@@ -56,6 +68,8 @@ export interface FabricItem {
     modifiedDateTime: string;
     modelUrl: string;
     users: FabricDataflowUser[];
+    datasourceUsages: FabricDatasourceUsage[];
+    upstreamDataflows: FabricUpstreamDataflow[];
 }
 
 export interface DataSummary {
@@ -79,26 +93,47 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
 
     // Try msdyn_dataflows first (PP Dataflows entity)
     try {
-        const ppUrl = `${dataverseConfig.baseUrl}/msdyn_dataflows?$select=msdyn_dataflowid,msdyn_name,msdyn_description,statecode,modifiedon,createdon,_ownerid_value,_createdby_value,_modifiedby_value&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500&$count=true`;
+        const ppUrl = `${dataverseConfig.baseUrl}/msdyn_dataflows?$select=msdyn_dataflowid,msdyn_name,msdyn_description,statecode,modifiedon,createdon,_ownerid_value,_createdby_value,_modifiedby_value,msdyn_refreshhistory&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500&$count=true`;
         const ppRes = await fetch(ppUrl, { headers });
 
         if (ppRes.ok) {
             const ppData = await ppRes.json();
             console.log('[DataService] msdyn_dataflows:', ppData.value?.length || 0, 'items');
 
-            const dataflows = (ppData.value || []).map((df: Record<string, unknown>) => ({
-                id: df.msdyn_dataflowid as string,
-                name: df.msdyn_name as string || '',
-                state: (df.statecode as number) === 0 ? 'Active' : 'Inactive',
-                stateLabel: (df['statecode@OData.Community.Display.V1.FormattedValue'] as string) || ((df.statecode as number) === 0 ? 'Active' : 'Inactive'),
-                lastModified: df.modifiedon as string || '',
-                createdOn: df.createdon as string || '',
-                owner: (df['_ownerid_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
-                description: df.msdyn_description as string || '',
-                category: 'Dataflow',
-                createdBy: (df['_createdby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
-                modifiedBy: (df['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
-            }));
+            const dataflows = (ppData.value || []).map((df: Record<string, unknown>) => {
+                // Extract unique entity names from refresh history JSON
+                let entityNames: string[] = [];
+                try {
+                    const histJson = df.msdyn_refreshhistory as string;
+                    if (histJson) {
+                        const hist = JSON.parse(histJson) as Array<Record<string, unknown>>;
+                        const names = new Set<string>();
+                        for (const h of hist) {
+                            const entities = (h.EntitiesRefreshHistory as Array<Record<string, unknown>>) || [];
+                            for (const e of entities) {
+                                const name = e.EntityName as string;
+                                if (name) names.add(name);
+                            }
+                        }
+                        entityNames = Array.from(names).sort();
+                    }
+                } catch { /* ignore parse errors */ }
+
+                return {
+                    id: df.msdyn_dataflowid as string,
+                    name: df.msdyn_name as string || '',
+                    state: (df.statecode as number) === 0 ? 'Active' : 'Inactive',
+                    stateLabel: (df['statecode@OData.Community.Display.V1.FormattedValue'] as string) || ((df.statecode as number) === 0 ? 'Active' : 'Inactive'),
+                    lastModified: df.modifiedon as string || '',
+                    createdOn: df.createdon as string || '',
+                    owner: (df['_ownerid_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
+                    description: df.msdyn_description as string || '',
+                    category: 'Dataflow',
+                    createdBy: (df['_createdby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
+                    modifiedBy: (df['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
+                    entityNames,
+                };
+            });
 
             // Dedupe by name — keep latest modified per name
             const seen = new Map<string, Dataflow>();
@@ -142,6 +177,7 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
         category: (df['category@OData.Community.Display.V1.FormattedValue'] as string) || ((df.category as number) === 5 ? 'Cloud Flow' : 'Desktop Flow'),
         createdBy: (df['_createdby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
         modifiedBy: (df['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
+        entityNames: [],
     }));
 
     // Dedupe by name — keep latest modified per name
@@ -155,6 +191,88 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
     const deduped = Array.from(seen.values());
 
     return { dataflows: deduped, total: deduped.length };
+}
+
+// ── PA Dataflow Refresh History (from Dataverse msdyn_refreshhistory JSON) ──
+
+export interface DataflowRefreshRun {
+    id: string;
+    status: string;       // Success | Failed | Running
+    startedOn: string;
+    completedOn: string;
+    trigger: string;      // RefreshType
+    errorCode: string;
+    errorMessage: string;
+    entityName: string;
+    insertCount: number;
+    rowsRead: number;
+}
+
+export async function fetchDataflowRefreshHistory(accessToken: string, dataflowId: string): Promise<DataflowRefreshRun[]> {
+    const headers = {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0",
+    };
+
+    const url = `${dataverseConfig.baseUrl}/msdyn_dataflows(${dataflowId})?$select=msdyn_refreshhistory`;
+
+    try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) {
+            console.warn('[DataService] msdyn_refreshhistory fetch failed:', res.status);
+            return [];
+        }
+
+        const data = await res.json();
+        const jsonStr = data.msdyn_refreshhistory as string;
+        if (!jsonStr) return [];
+
+        const history = JSON.parse(jsonStr) as Array<Record<string, unknown>>;
+
+        // Sort by StartTime descending (most recent first), take top 50
+        return history
+            .sort((a, b) => new Date(b.StartTime as string).getTime() - new Date(a.StartTime as string).getTime())
+            .slice(0, 50)
+            .map((h) => {
+                const errorInfo = h.ErrorInfo as Record<string, string> | null;
+                const exceptionInfo = h.ExceptionInfo as Record<string, unknown> | null;
+                const errorMsg = errorInfo?.ErrorMessage
+                    || (exceptionInfo?.Message as string)
+                    || '';
+
+                // Extract entity-level stats
+                const entities = (h.EntitiesRefreshHistory as Array<Record<string, unknown>>) || [];
+                const firstEntity = entities[0] || {};
+                const entityName = (firstEntity.EntityName as string) || '';
+                const insertCount = (firstEntity.InsertCount as number) || 0;
+
+                // Aggregate rowsRead from DataSourceStatistics
+                const partitions = (firstEntity.PartitionsRefreshHistory as Array<Record<string, unknown>>) || [];
+                let rowsRead = 0;
+                for (const p of partitions) {
+                    const stats = (p.DataSourceStatistics as Array<Record<string, number>>) || [];
+                    for (const s of stats) rowsRead += (s.RowsRead || 0);
+                }
+
+                return {
+                    id: (h.TransactionId as string) || '',
+                    status: (h.RefreshStatus as string) || '',
+                    startedOn: (h.StartTime as string) || '',
+                    completedOn: (h.EndTime as string) || '',
+                    trigger: ((h.RefreshType as string) || '').replace('RefreshType', ''),
+                    errorCode: errorInfo?.ErrorCode || '',
+                    errorMessage: errorMsg,
+                    entityName,
+                    insertCount,
+                    rowsRead,
+                };
+            });
+    } catch (e) {
+        console.warn('[DataService] msdyn_refreshhistory parse error:', e);
+        return [];
+    }
 }
 
 // ── Fabric / Power BI API ──
@@ -208,7 +326,7 @@ export async function fetchFabricItems(accessToken: string, workspaces: FabricWo
                     allItems.push({
                         id: ds.id as string, name: ds.name as string || '', type: 'Dataset',
                         configuredBy: ds.configuredBy as string || '', isRefreshable: ds.isRefreshable as boolean || false, workspaceName: ws.name, workspaceId: ws.id,
-                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [],
+                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [], datasourceUsages: [], upstreamDataflows: [],
                     });
                 });
             }
@@ -230,6 +348,15 @@ export async function fetchFabricItems(accessToken: string, workspaces: FabricWo
                             emailAddress: u.emailAddress as string || '',
                             dataflowUserAccessRight: u.dataflowUserAccessRight as string || '',
                         })),
+                        datasourceUsages: ((df.datasourceUsages as Array<Record<string, unknown>>) || []).map(ds => ({
+                            datasourceInstanceId: ds.datasourceInstanceId as string || '',
+                            datasourceType: ds.datasourceType as string || '',
+                            connectionDetails: (ds.connectionDetails as Record<string, string>) || {},
+                        })),
+                        upstreamDataflows: ((df.upstreamDataflows as Array<Record<string, unknown>>) || []).map(ud => ({
+                            targetDataflowId: ud.targetDataflowId as string || '',
+                            groupId: ud.groupId as string || '',
+                        })),
                     });
                 });
             }
@@ -241,7 +368,7 @@ export async function fetchFabricItems(accessToken: string, workspaces: FabricWo
                     allItems.push({
                         id: rpt.id as string, name: rpt.name as string || '', type: 'Report',
                         configuredBy: '', isRefreshable: false, workspaceName: ws.name, workspaceId: ws.id,
-                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [],
+                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [], datasourceUsages: [], upstreamDataflows: [],
                     });
                 });
             }
@@ -253,7 +380,7 @@ export async function fetchFabricItems(accessToken: string, workspaces: FabricWo
                     allItems.push({
                         id: p.id as string, name: (p.displayName || p.name) as string || '', type: 'Pipeline',
                         configuredBy: '', isRefreshable: false, workspaceName: ws.name, workspaceId: ws.id,
-                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [],
+                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [], datasourceUsages: [], upstreamDataflows: [],
                     });
                 });
             }
@@ -265,7 +392,7 @@ export async function fetchFabricItems(accessToken: string, workspaces: FabricWo
                     allItems.push({
                         id: lh.id as string, name: (lh.displayName || lh.name) as string || '', type: 'Lakehouse',
                         configuredBy: '', isRefreshable: false, workspaceName: ws.name, workspaceId: ws.id,
-                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [],
+                        description: '', modifiedBy: '', modifiedDateTime: '', modelUrl: '', users: [], datasourceUsages: [], upstreamDataflows: [],
                     });
                 });
             }

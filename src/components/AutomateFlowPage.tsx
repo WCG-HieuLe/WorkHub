@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronRight, ExternalLink, Clock, History,
 } from 'lucide-react';
 import type { FlowDefinition, FlowRun } from '@/services/azure/powerPlatformService';
-import { fetchFlows, fetchFlowRuns } from '@/services/azure/powerPlatformService';
+import { fetchFlows, fetchFlowRuns, fetchFlowRunTriggerOutput } from '@/services/azure/powerPlatformService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { dataverseConfig, powerAutomateConfig } from '@/config/authConfig';
 import { getCache, setCache, clearCache } from '@/services/cache';
@@ -63,6 +63,12 @@ export const AutomateFlowPage: React.FC = () => {
     const [historyRuns, setHistoryRuns] = useState<FlowRun[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [historyOpen, setHistoryOpen] = useState(false);
+    const [historySearch, setHistorySearch] = useState('');
+
+    // Trigger output expand state
+    const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+    const [triggerOutput, setTriggerOutput] = useState<Record<string, unknown> | null>(null);
+    const [triggerLoading, setTriggerLoading] = useState(false);
 
     // Open history popup (lazy load)
     const openHistory = useCallback(async (flow: FlowDefinition) => {
@@ -80,6 +86,38 @@ export const AutomateFlowPage: React.FC = () => {
             setHistoryLoading(false);
         }
     }, [instance, accounts]);
+
+    // Toggle expand run → lazy load trigger output
+    const toggleRunExpand = useCallback(async (run: FlowRun) => {
+        if (expandedRunId === run.id) {
+            setExpandedRunId(null);
+            setTriggerOutput(null);
+            return;
+        }
+        setExpandedRunId(run.id);
+        setTriggerOutput(null);
+        setTriggerLoading(true);
+        try {
+            const output = await fetchFlowRunTriggerOutput(run.triggerOutputsLink);
+            setTriggerOutput(output);
+        } catch {
+            setTriggerOutput(null);
+        } finally {
+            setTriggerLoading(false);
+        }
+    }, [expandedRunId]);
+
+    // Filter runs by search keyword
+    const filteredRuns = useMemo(() => {
+        if (!historySearch.trim()) return historyRuns;
+        const q = historySearch.toLowerCase();
+        return historyRuns.filter(r =>
+            r.status.toLowerCase().includes(q) ||
+            r.trigger.toLowerCase().includes(q) ||
+            r.id.toLowerCase().includes(q) ||
+            r.startedOn.toLowerCase().includes(q)
+        );
+    }, [historyRuns, historySearch]);
 
     const loadData = useCallback(async (force = false) => {
         if (!isAuthenticated || accounts.length === 0) return;
@@ -123,8 +161,17 @@ export const AutomateFlowPage: React.FC = () => {
     }, [flows, search]);
 
     const toggleGroup = (key: string) => {
-        setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+        setExpandedGroups(prev => prev[key] ? {} : { [key]: true });
     };
+
+    // Auto-open 'Operation' group by default
+    useEffect(() => {
+        if (Object.keys(expandedGroups).length > 0) return;
+        if (ownerGroups.length === 0) return;
+        const opGroup = ownerGroups.find(([name]) => name.toLowerCase().includes('operation'));
+        if (opGroup) setExpandedGroups({ [opGroup[0]]: true });
+        else setExpandedGroups({ [ownerGroups[0][0]]: true });
+    }, [ownerGroups]);
 
     const activeCount = flows.filter(f => f.state === 'Activated').length;
     const draftCount = flows.filter(f => f.state !== 'Activated').length;
@@ -367,19 +414,37 @@ export const AutomateFlowPage: React.FC = () => {
                             <button className="detail-sidebar-close" onClick={() => setHistoryOpen(false)} title="Close"><X size={16} /></button>
                         </div>
                         <div className="history-modal-body">
+                            {/* Search bar */}
+                            <div style={{ marginBottom: '0.75rem' }}>
+                                <div className="reports-search" style={{ width: '100%' }}>
+                                    <Search size={14} className="reports-search-icon" />
+                                    <input
+                                        type="text"
+                                        placeholder="Filter by status, trigger, ID..."
+                                        value={historySearch}
+                                        onChange={e => setHistorySearch(e.target.value)}
+                                        className="reports-search-input"
+                                    />
+                                    {historySearch && (
+                                        <button onClick={() => setHistorySearch('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', lineHeight: 0 }}>
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                             {historyLoading ? (
                                 <div className="billing-loading" style={{ padding: '2rem' }}>
                                     <RefreshCw size={16} className="spin" />
                                     <p>Đang tải lịch sử...</p>
                                 </div>
-                            ) : historyRuns.length > 0 ? (
+                            ) : filteredRuns.length > 0 ? (
                                 <div className="billing-table-wrapper">
                                     <table className="billing-table">
                                         <thead>
-                                            <tr><th>Status</th><th>Trigger</th><th>Started</th><th>Duration</th></tr>
+                                            <tr><th>Status</th><th>Trigger</th><th>Started</th><th>Duration</th><th style={{ width: 30 }}></th></tr>
                                         </thead>
                                         <tbody>
-                                            {historyRuns.map(run => {
+                                            {filteredRuns.map(run => {
                                                 const isOk = run.status === 'Succeeded';
                                                 const isFail = ['Failed', 'Faulted', 'TimedOut', 'Aborted'].includes(run.status);
                                                 const duration = run.startedOn && run.completedOn
@@ -390,21 +455,75 @@ export const AutomateFlowPage: React.FC = () => {
                                                         return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
                                                     })()
                                                     : '—';
+                                                const isExpanded = expandedRunId === run.id;
                                                 return (
-                                                    <tr key={run.id} title={run.errorMessage || ''}>
-                                                        <td>
-                                                            <span className="status-badge" style={{
-                                                                color: isOk ? '#10b981' : isFail ? '#ef4444' : '#f59e0b',
-                                                                background: isOk ? 'rgba(16,185,129,0.1)' : isFail ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                                                            }}>
-                                                                {isOk ? <CheckCircle size={11} /> : isFail ? <XCircle size={11} /> : <Clock size={11} />}
-                                                                {run.status}
-                                                            </span>
-                                                        </td>
-                                                        <td style={{ fontSize: '11px' }}>{run.trigger || '—'}</td>
-                                                        <td style={{ fontSize: '11px' }}>{formatDateTime(run.startedOn)}</td>
-                                                        <td style={{ fontSize: '11px' }}>{duration}</td>
-                                                    </tr>
+                                                    <React.Fragment key={run.id}>
+                                                        <tr
+                                                            className="clickable-row"
+                                                            onClick={() => toggleRunExpand(run)}
+                                                            title={run.errorMessage || 'Click to view trigger data'}
+                                                            style={isExpanded ? { background: 'rgba(167,139,250,0.06)' } : undefined}
+                                                        >
+                                                            <td>
+                                                                <span className="status-badge" style={{
+                                                                    color: isOk ? '#10b981' : isFail ? '#ef4444' : '#f59e0b',
+                                                                    background: isOk ? 'rgba(16,185,129,0.1)' : isFail ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                                                }}>
+                                                                    {isOk ? <CheckCircle size={11} /> : isFail ? <XCircle size={11} /> : <Clock size={11} />}
+                                                                    {run.status}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ fontSize: '11px' }}>{run.trigger || '—'}</td>
+                                                            <td style={{ fontSize: '11px' }}>{formatDateTime(run.startedOn)}</td>
+                                                            <td style={{ fontSize: '11px' }}>{duration}</td>
+                                                            <td>
+                                                                {isExpanded ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />}
+                                                            </td>
+                                                        </tr>
+                                                        {isExpanded && (
+                                                            <tr>
+                                                                <td colSpan={5} style={{ padding: 0 }}>
+                                                                    <div style={{
+                                                                        padding: '0.75rem 1rem',
+                                                                        background: 'rgba(0,0,0,0.25)',
+                                                                        borderTop: '1px solid rgba(255,255,255,0.04)',
+                                                                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                                                    }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                                            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                                                                Trigger Output
+                                                                            </span>
+                                                                            {triggerOutput && <CopyButton text={JSON.stringify(triggerOutput, null, 2)} label="JSON" />}
+                                                                        </div>
+                                                                        {triggerLoading ? (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                                                                <RefreshCw size={12} className="spin" /> Loading...
+                                                                            </div>
+                                                                        ) : triggerOutput ? (
+                                                                            <pre style={{
+                                                                                fontSize: '11px',
+                                                                                lineHeight: 1.4,
+                                                                                background: 'rgba(0,0,0,0.3)',
+                                                                                border: '1px solid rgba(255,255,255,0.06)',
+                                                                                borderRadius: 8,
+                                                                                padding: '10px 12px',
+                                                                                maxHeight: 360,
+                                                                                overflow: 'auto',
+                                                                                whiteSpace: 'pre-wrap',
+                                                                                wordBreak: 'break-all',
+                                                                                color: 'var(--text-secondary)',
+                                                                                margin: 0,
+                                                                            }}>
+                                                                                {JSON.stringify(triggerOutput, null, 2)}
+                                                                            </pre>
+                                                                        ) : (
+                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No trigger output available</div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
                                                 );
                                             })}
                                         </tbody>

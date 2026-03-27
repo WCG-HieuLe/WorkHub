@@ -176,6 +176,7 @@ export const DataflowPage: React.FC = () => {
     const paGroups = useMemo(() => {
         const filtered = paSearch
             ? paDataflows.filter(df =>
+                df.id.toLowerCase().includes(paSearch.toLowerCase()) ||
                 df.name.toLowerCase().includes(paSearch.toLowerCase()) ||
                 df.owner.toLowerCase().includes(paSearch.toLowerCase())
             )
@@ -194,6 +195,7 @@ export const DataflowPage: React.FC = () => {
     const fabricGroups = useMemo(() => {
         const filtered = fabricSearch
             ? fabricDataflows.filter(df =>
+                df.id.toLowerCase().includes(fabricSearch.toLowerCase()) ||
                 df.name.toLowerCase().includes(fabricSearch.toLowerCase()) ||
                 df.workspaceName.toLowerCase().includes(fabricSearch.toLowerCase())
             )

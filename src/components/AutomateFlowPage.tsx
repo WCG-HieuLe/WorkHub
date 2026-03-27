@@ -106,6 +106,7 @@ export const AutomateFlowPage: React.FC = () => {
     const ownerGroups = useMemo(() => {
         const filtered = search
             ? flows.filter(f =>
+                f.id.toLowerCase().includes(search.toLowerCase()) ||
                 f.name.toLowerCase().includes(search.toLowerCase()) ||
                 f.owner.toLowerCase().includes(search.toLowerCase()) ||
                 f.description.toLowerCase().includes(search.toLowerCase())

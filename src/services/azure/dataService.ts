@@ -79,7 +79,7 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
 
     // Try msdyn_dataflows first (PP Dataflows entity)
     try {
-        const ppUrl = `${dataverseConfig.baseUrl}/msdyn_dataflows?$select=msdyn_dataflowid,msdyn_name,msdyn_description,statecode,modifiedon,createdon,_ownerid_value,_createdby_value,_modifiedby_value&$orderby=modifiedon desc&$top=500&$count=true`;
+        const ppUrl = `${dataverseConfig.baseUrl}/msdyn_dataflows?$select=msdyn_dataflowid,msdyn_name,msdyn_description,statecode,modifiedon,createdon,_ownerid_value,_createdby_value,_modifiedby_value&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500&$count=true`;
         const ppRes = await fetch(ppUrl, { headers });
 
         if (ppRes.ok) {

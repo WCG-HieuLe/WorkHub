@@ -55,6 +55,7 @@ export const CanvasAppPage: React.FC = () => {
     const ownerGroups = useMemo(() => {
         const filtered = search
             ? apps.filter(app =>
+                app.id.toLowerCase().includes(search.toLowerCase()) ||
                 app.displayName.toLowerCase().includes(search.toLowerCase()) ||
                 app.owner.displayName.toLowerCase().includes(search.toLowerCase()) ||
                 app.owner.email.toLowerCase().includes(search.toLowerCase())

@@ -1,4 +1,5 @@
 import React from 'react';
+import { NotificationPanel } from '@/components/NotificationPanel';
 
 interface HeaderProps {
     year: number;
@@ -62,6 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
                             </button>
                         </div>
                     )}
+
+                    <NotificationPanel />
                 </div>
             </div>
         </header>

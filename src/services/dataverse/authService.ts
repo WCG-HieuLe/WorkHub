@@ -128,3 +128,34 @@ export async function fetchSubjectId(
     }
 }
 
+/**
+ * Fetch Employee Vietnamese Name using Employee ID
+ * Returns the crdfd_name field (e.g. "Lê Hoàng Hiếu")
+ */
+export async function fetchEmployeeName(
+    accessToken: string,
+    employeeId: string
+): Promise<string | null> {
+    const filter = `crdfd_employeeid eq ${employeeId} and statecode eq 0`;
+    const select = "crdfd_name";
+    const url = `${dataverseConfig.baseUrl}/crdfd_employees?$filter=${encodeURIComponent(filter)}&$select=${select}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: createFetchHeaders(accessToken),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.value && data.value.length > 0) {
+                return data.value[0].crdfd_name;
+            }
+            return null;
+        }
+        console.error("Error fetching employee name:", await response.text());
+        return null;
+    } catch (e) {
+        console.error("Exception fetching employee name:", e);
+        return null;
+    }
+}

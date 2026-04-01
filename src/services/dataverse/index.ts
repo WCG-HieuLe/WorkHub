@@ -21,3 +21,6 @@ export * from './types';
 // Common utilities
 export * from './common';
 
+// Notification services
+export * from './notificationService';
+

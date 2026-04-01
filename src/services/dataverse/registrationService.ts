@@ -275,3 +275,48 @@ export async function updatePhieuDangKy(
     }
 }
 
+/**
+ * Fetch registrations where the current user is the approver (quản lý trực tiếp)
+ * Only fetches registrations within the selected month
+ */
+export async function fetchApproverRegistrations(
+    accessToken: string,
+    approverName: string,
+    year?: number,
+    month?: number
+): Promise<TeamRegistration[]> {
+    // Filter by approver name (text field crdfd_quanlytructiep)
+    let filter = `statecode eq 0 and crdfd_quanlytructiep eq '${approverName}'`;
+
+    if (year !== undefined && month !== undefined) {
+        const startStr = formatDate(year, month, 1);
+        const nextMonthDate = new Date(year, month + 1, 1);
+        const startStrNext = formatDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1);
+        // Only fetch registrations within the selected month
+        filter = `statecode eq 0 and crdfd_quanlytructiep eq '${approverName}' and crdfd_tungay ge ${startStr} and crdfd_tungay lt ${startStrNext}`;
+    }
+
+    const select = "crdfd_phieuangkyid,_crdfd_nhanvien_value,crdfd_loaiangky,crdfd_tungay,crdfd_enngay,crdfd_sogio2,crdfd_diengiai,crdfd_captrenduyet,crdfd_hinhthuc,crdfd_quanlytructiep,cr1bb_songay,cr1bb_sopheptonnamtruoc,new_sophepconlaitoithangthucte";
+    const url = `${dataverseConfig.baseUrl}/crdfd_phieuangkies?$filter=${encodeURIComponent(filter)}&$select=${select}&$orderby=crdfd_tungay desc`;
+
+    try {
+        const response = await fetch(url, {
+            headers: createFetchHeadersWithAnnotations(accessToken),
+        });
+
+        if (!response.ok) {
+            console.error("Error fetching approver registrations:", await response.text());
+            return [];
+        }
+
+        const data = await response.json();
+        return (data.value || []).map((item: PhieuDangKy & { [key: string]: unknown }) => ({
+            ...item,
+            employeeName: (item['_crdfd_nhanvien_value@OData.Community.Display.V1.FormattedValue'] as string) || "Unknown",
+            employeeCode: undefined
+        }));
+    } catch (e) {
+        console.error("Error calling Approver Registration API:", e);
+        return [];
+    }
+}

@@ -35,7 +35,7 @@ const LeaveDashboard = lazy(() => import('@/components/LeaveDashboard').then(m =
 
 import { DayRecord, MonthSummary } from '@/types/types';
 import { calculateMonthSummary } from '@/utils/workUtils';
-import { fetchChamCongData, getAccessToken, fetchEmployeeIdFromSystemUser } from '@/services/dataverse';
+import { fetchChamCongData, getAccessToken, fetchEmployeeIdFromSystemUser, fetchEmployeeName } from '@/services/dataverse';
 import { dataverseConfig } from '@/config/authConfig';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import '@/index.css';
@@ -89,6 +89,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [employeeId, setEmployeeId] = useState<string | null>(null);
+    const [employeeName, setEmployeeName] = useState<string | null>(null);
 
     const handleLogin = useCallback(async () => {
         try {
@@ -124,6 +125,9 @@ function App() {
                     const id = await fetchEmployeeIdFromSystemUser(token, azureAdObjectId);
                     if (id) {
                         setEmployeeId(id);
+                        // Also fetch Vietnamese name for approver matching
+                        const name = await fetchEmployeeName(token, id);
+                        if (name) setEmployeeName(name);
                     } else {
                         setError('Không tìm thấy thông tin nhân viên trong Dataverse.');
                     }
@@ -246,14 +250,15 @@ function App() {
         return <ManagementView activeSubView={subView} />;
     };
 
-    // Leave page — derives tab from route
-    const LeavePage = ({ defaultTab }: { defaultTab: 'registration' | 'dntt' }) => (
+    // Leave page — derives mode from route
+    const LeavePage = ({ mode }: { mode: 'registration' | 'dntt' }) => (
         <Suspense fallback={<LoadingSpinner />}>
             <LeaveDashboard
                 employeeId={employeeId}
+                employeeName={employeeName}
                 year={year}
                 month={month}
-                defaultTab={defaultTab}
+                mode={mode}
             />
         </Suspense>
     );
@@ -283,8 +288,8 @@ function App() {
 
                             {/* Personal */}
                             <Route path={ROUTES.PERSONAL_TIMESHEET} element={<TimesheetPage />} />
-                            <Route path={ROUTES.PERSONAL_REGISTRATION} element={<LeavePage defaultTab="registration" />} />
-                            <Route path={ROUTES.PERSONAL_PAYMENT} element={<LeavePage defaultTab="dntt" />} />
+                            <Route path={ROUTES.PERSONAL_REGISTRATION} element={<LeavePage mode="registration" />} />
+                            <Route path={ROUTES.PERSONAL_PAYMENT} element={<LeavePage mode="dntt" />} />
 
                             {/* Operations */}
                             <Route path={ROUTES.MGMT_DATA} element={<DataPage />} />

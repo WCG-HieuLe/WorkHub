@@ -1,24 +1,25 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { toast } from 'sonner';
-import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus } from '@/services/dataverse';
+import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus, fetchApproverRegistrations } from '@/services/dataverse';
 import { LeaveDetailModal } from '@/components/LeaveDetailModal';
 
 interface LeaveDashboardProps {
     employeeId: string | null;
+    employeeName: string | null;
     year: number;
     month: number;
-    defaultTab?: 'registration' | 'dntt';
+    mode: 'registration' | 'dntt';
 }
 
-export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year, month, defaultTab = 'registration' }) => {
+export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, employeeName, year, month, mode }) => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'registration' | 'dntt'>(defaultTab);
     const [registrations, setRegistrations] = useState<TeamRegistration[]>([]);
     const [dnttRecords, setDnttRecords] = useState<DNTTRecord[]>([]);
+    const [regFilter, setRegFilter] = useState<'pending' | 'all'>('pending');
 
     // Cache subjectId to avoid re-fetching
     const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -31,43 +32,58 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
         try {
             const token = await getAccessToken(instance, accounts[0]);
 
-            // 1. Fetch Personal Registrations (Always)
-            const regPromise = fetchPersonalRegistrations(token, employeeId, year, month);
+            if (mode === 'registration') {
+                // Fetch BOTH: team registrations (approver) + personal registrations
+                const promises: Promise<TeamRegistration[]>[] = [];
 
-            // 2. Fetch DNTT Records (Need Subject ID)
-            let dnttPromise: Promise<DNTTRecord[]> = Promise.resolve([]);
+                // 1. Personal registrations (user's own)
+                promises.push(fetchPersonalRegistrations(token, employeeId, year, month));
 
-            let currentSubjectId = subjectId;
+                // 2. Team registrations (user is the approver) — only if we have employee name
+                if (employeeName) {
+                    promises.push(fetchApproverRegistrations(token, employeeName, year, month));
+                }
 
-            // If we don't have subjectId yet, fetch it chain: EmployeeID -> Code -> SubjectID
-            if (!currentSubjectId) {
-                const code = await fetchEmployeeCode(token, employeeId);
-                // console.log("Employee Code:", code);
-                if (code) {
-                    const sid = await fetchSubjectId(token, code);
-                    // console.log("Subject ID:", sid);
-                    if (sid) {
-                        setSubjectId(sid);
-                        currentSubjectId = sid;
+                const results = await Promise.all(promises);
+
+                // Merge and deduplicate by registration ID
+                const allRegs = results.flat();
+                const uniqueMap = new Map<string, TeamRegistration>();
+                allRegs.forEach(reg => uniqueMap.set(reg.crdfd_phieuangkyid, reg));
+                const merged = Array.from(uniqueMap.values());
+
+                // Sort by date descending
+                merged.sort((a, b) => new Date(b.crdfd_tungay).getTime() - new Date(a.crdfd_tungay).getTime());
+
+                setRegistrations(merged);
+                setDnttRecords([]);
+            } else {
+                // DNTT mode — fetch DNTT records
+                let currentSubjectId = subjectId;
+
+                if (!currentSubjectId) {
+                    const code = await fetchEmployeeCode(token, employeeId);
+                    if (code) {
+                        const sid = await fetchSubjectId(token, code);
+                        if (sid) {
+                            setSubjectId(sid);
+                            currentSubjectId = sid;
+                        }
                     }
                 }
+
+                if (currentSubjectId) {
+                    const dnttData = await fetchDNTTRecords(token, currentSubjectId, year, month);
+                    setDnttRecords(dnttData);
+                }
+                setRegistrations([]);
             }
-
-            if (currentSubjectId) {
-                dnttPromise = fetchDNTTRecords(token, currentSubjectId, year, month);
-            }
-
-            const [regData, dnttData] = await Promise.all([regPromise, dnttPromise]);
-
-            setRegistrations(regData);
-            setDnttRecords(dnttData);
-
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
         }
-    }, [isAuthenticated, accounts, instance, employeeId, year, month, subjectId]);
+    }, [isAuthenticated, accounts, instance, employeeId, employeeName, year, month, subjectId, mode]);
 
     useEffect(() => {
         loadData();
@@ -128,9 +144,7 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
             const token = await getAccessToken(instance, accounts[0]);
             const success = await updateDNTTStatus(token, dnttRecord.cr44a_enghithanhtoanid, fieldName, value);
             if (success) {
-                // Refresh data
                 await loadData();
-                // Close modal
                 closeModal();
             } else {
                 toast.error('Cập nhật thất bại!');
@@ -145,25 +159,33 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
 
     return (
         <div className="leave-dashboard list-view-container">
-            {/* Unified Header */}
+            {/* Header with count + external link */}
             <div className="list-view-header">
                 <div className="list-view-toolbar">
-                    <button
-                        className={`tab-btn ${activeTab === 'registration' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('registration')}
-                    >
-                        📋 Phiếu đăng ký ({registrations.length})
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'dntt' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('dntt')}
-                    >
-                        💰 DNTT ({dnttRecords.length})
-                    </button>
+                    {mode === 'registration' ? (
+                        <div className="sub-tabs">
+                            <button
+                                className={`sub-tab ${regFilter === 'pending' ? 'active' : ''}`}
+                                onClick={() => setRegFilter('pending')}
+                            >
+                                Chưa duyệt ({registrations.filter(r => r.crdfd_captrenduyet === 191920000).length})
+                            </button>
+                            <button
+                                className={`sub-tab ${regFilter === 'all' ? 'active' : ''}`}
+                                onClick={() => setRegFilter('all')}
+                            >
+                                Tất cả ({registrations.length})
+                            </button>
+                        </div>
+                    ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            💰 Đề nghị thanh toán ({dnttRecords.length})
+                        </span>
+                    )}
                 </div>
 
                 <div className="list-view-actions">
-                    {activeTab === 'registration' && (
+                    {mode === 'registration' && (
                         <a
                             href="https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&newWindow=true&pagetype=entitylist&etn=crdfd_phieuangky&viewid=ec3c56bb-5723-4663-b1d7-a9c741ff27bd&viewType=1039"
                             target="_blank"
@@ -174,7 +196,7 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                             🔗
                         </a>
                     )}
-                    {activeTab === 'dntt' && (
+                    {mode === 'dntt' && (
                         <a
                             href="https://wecare-ii.crm5.dynamics.com/main.aspx?appid=d6bc8d55-f810-f011-998a-6045bd1bb1cd&pagetype=entitylist&etn=cr44a_enghithanhtoan&viewid=1d9ecf7f-47b3-ee11-a568-000d3aa3f582&viewType=1039"
                             target="_blank"
@@ -201,17 +223,22 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                 </div>
             ) : (
                 <div className="list-view-table-wrapper">
-                    {/* Registration Tab */}
-                    {activeTab === 'registration' && (
+                    {/* Registration */}
+                    {mode === 'registration' && (() => {
+                        const filtered = regFilter === 'pending'
+                            ? registrations.filter(r => r.crdfd_captrenduyet === 191920000)
+                            : registrations;
+                        return (
                         <>
-                            {registrations.length === 0 ? (
+                            {filtered.length === 0 ? (
                                 <div className="list-view-empty-state">
-                                    <p>Chưa có phiếu đăng ký nào trong tháng này.</p>
+                                    <p>{regFilter === 'pending' ? 'Không có phiếu chờ duyệt.' : 'Không có phiếu đăng ký nào trong tháng này.'}</p>
                                 </div>
                             ) : (
                                 <table className="list-view-table">
                                     <thead>
                                         <tr>
+                                            <th>Nhân viên</th>
                                             <th>Loại</th>
                                             <th>Từ ngày</th>
                                             <th>Đến ngày</th>
@@ -221,9 +248,10 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {registrations.map((reg) => (
+                                        {filtered.map((reg) => (
                                             <tr key={reg.crdfd_phieuangkyid} onClick={() => handleRowClick(reg, 'registration')}>
-                                                <td className="font-medium">{getRegistrationTypeName(reg.crdfd_loaiangky)}</td>
+                                                <td className="font-medium">{reg.employeeName}</td>
+                                                <td>{getRegistrationTypeName(reg.crdfd_loaiangky)}</td>
                                                 <td>{formatDate(reg.crdfd_tungay)}</td>
                                                 <td>{formatDate(reg.crdfd_enngay)}</td>
                                                 <td className="text-right">{reg.crdfd_sogio2 || '-'}</td>
@@ -239,10 +267,11 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                                 </table>
                             )}
                         </>
-                    )}
+                        );
+                    })()}
 
-                    {/* DNTT Tab */}
-                    {activeTab === 'dntt' && (
+                    {/* DNTT */}
+                    {mode === 'dntt' && (
                         <>
                             {dnttRecords.length === 0 ? (
                                 <div className="list-view-empty-state">
@@ -297,12 +326,9 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, year
                         registration={selectedItem as TeamRegistration}
                         onClose={closeModal}
                         onUpdateSuccess={(updatedItem) => {
-                            // Optimistic update
                             setRegistrations(prev => prev.map(item =>
                                 item.crdfd_phieuangkyid === updatedItem.crdfd_phieuangkyid ? updatedItem : item
                             ));
-
-                            // Background refresh to ensure data consistency
                             loadData();
                             closeModal();
                         }}

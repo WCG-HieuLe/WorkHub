@@ -61,7 +61,10 @@ export const DayDetail: FC<DayDetailProps> = ({ record, onClose, employeeId, onS
     const dayOfWeek = dateObj.getDay();
     const standardHours = getStandardHours(dayOfWeek);
 
-    const isInsufficient = record.hoursWorked < standardHours &&
+    const AUTO_NOTES = ['thiếu công', 'đủ công', ''];
+    const isAutoNote = (note: string) => AUTO_NOTES.includes(note.toLowerCase().trim());
+
+    const isInsufficient = soGioLam < standardHours &&
         !['leave', 'off', 'holiday'].includes(record.status) &&
         standardHours > 0;
 
@@ -81,6 +84,12 @@ export const DayDetail: FC<DayDetailProps> = ({ record, onClose, employeeId, onS
         setIsTimeChanged(true);
     };
 
+    const updateAutoNote = (hours: number) => {
+        if (isAutoNote(ghiChu) && standardHours > 0 && !['leave', 'off', 'holiday'].includes(record.status)) {
+            setGhiChu(hours >= standardHours ? 'Đủ công' : 'Thiếu công');
+        }
+    };
+
     const handleTimeChange = (type: 'in' | 'out', value: string) => {
         const newIn = type === 'in' ? value : checkInTime;
         const newOut = type === 'out' ? value : checkOutTime;
@@ -88,7 +97,9 @@ export const DayDetail: FC<DayDetailProps> = ({ record, onClose, employeeId, onS
         if (type === 'in') setCheckInTime(value);
         else setCheckOutTime(value);
 
-        setSoGioLam(calculateActualHours(newIn, newOut, standardHours));
+        const newHours = calculateActualHours(newIn, newOut, standardHours);
+        setSoGioLam(newHours);
+        updateAutoNote(newHours);
         setIsTimeChanged(true);
     };
 
@@ -199,7 +210,11 @@ export const DayDetail: FC<DayDetailProps> = ({ record, onClose, employeeId, onS
                                         className="day-hours-input"
                                         value={soGioLam}
                                         title="Số giờ làm"
-                                        onChange={(e) => handleFieldChange(setSoGioLam, parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => {
+                                            const newHours = parseFloat(e.target.value) || 0;
+                                            handleFieldChange(setSoGioLam, newHours);
+                                            updateAutoNote(newHours);
+                                        }}
                                     />
                                     <span className="opacity-80-bold">giờ</span>
                                 </div>

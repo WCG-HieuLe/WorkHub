@@ -3,7 +3,7 @@ import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Workflow, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, ChevronDown, ChevronRight,
-    Layers, Factory, Clock, Users, ExternalLink, History, Database,
+    Layers, Factory, Clock, Users, ExternalLink, History, Database, CalendarClock, Copy,
 } from 'lucide-react';
 import type { Dataflow, FabricItem, FabricWorkspace, FabricDataflowTransaction, FabricRefreshSchedule, DataflowRefreshRun } from '@/services/azure/dataService';
 import { fetchDataflows, fetchFabricWorkspaces, fetchFabricItems, fetchDataflowTransactions, fetchDataflowRefreshSchedule, fetchDataflowRefreshHistory } from '@/services/azure/dataService';
@@ -40,6 +40,8 @@ export const DataflowPage: React.FC = () => {
     const [paLoading, setPaLoading] = useState(false);
     const [paError, setPaError] = useState<string | null>(null);
     const [paSearch, setPaSearch] = useState('');
+    const [paStatusFilter, setPaStatusFilter] = useState<string>('all');
+    const [paScheduleFilter, setPaScheduleFilter] = useState<string>('all');
     const paLoaded = paCached !== null;
 
     // ── Fabric state ──
@@ -174,14 +176,28 @@ export const DataflowPage: React.FC = () => {
 
     // ── PA grouped by owner ──
     const paGroups = useMemo(() => {
-        const filtered = paSearch
-            ? paDataflows.filter(df =>
-                df.id.toLowerCase().includes(paSearch.toLowerCase()) ||
-                df.name.toLowerCase().includes(paSearch.toLowerCase()) ||
-                df.owner.toLowerCase().includes(paSearch.toLowerCase()) ||
-                df.entityNames.some(e => e.toLowerCase().includes(paSearch.toLowerCase()))
-            )
-            : paDataflows;
+        let filtered = paDataflows;
+        // Text search
+        if (paSearch) {
+            const q = paSearch.toLowerCase();
+            filtered = filtered.filter(df =>
+                df.id.toLowerCase().includes(q) ||
+                df.name.toLowerCase().includes(q) ||
+                df.owner.toLowerCase().includes(q) ||
+                df.entityNames.some(e => e.toLowerCase().includes(q))
+            );
+        }
+        // Status filter
+        if (paStatusFilter !== 'all') {
+            filtered = filtered.filter(df => {
+                if (paStatusFilter === 'none') return !df.lastRefreshStatus;
+                return df.lastRefreshStatus?.toLowerCase() === paStatusFilter.toLowerCase();
+            });
+        }
+        // Schedule filter
+        if (paScheduleFilter !== 'all') {
+            filtered = filtered.filter(df => paScheduleFilter === 'yes' ? df.hasSchedule : !df.hasSchedule);
+        }
         const map = new Map<string, Dataflow[]>();
         for (const df of filtered) {
             const key = df.owner || 'Unknown';
@@ -190,7 +206,7 @@ export const DataflowPage: React.FC = () => {
             map.set(key, list);
         }
         return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    }, [paDataflows, paSearch]);
+    }, [paDataflows, paSearch, paStatusFilter, paScheduleFilter]);
 
     // ── Fabric grouped by workspace ──
     const fabricGroups = useMemo(() => {
@@ -212,8 +228,8 @@ export const DataflowPage: React.FC = () => {
     }, [fabricDataflows, fabricSearch]);
 
     // ── Derived stats ──
-    const paActiveCount = paDataflows.filter(df => df.state === 'Activated' || df.state === 'Active').length;
     const paOwnerCount = new Set(paDataflows.map(d => d.owner).filter(Boolean)).size;
+    const paScheduledCount = paDataflows.filter(df => df.hasSchedule).length;
 
     // ── Active tab helpers ──
     const isPA = activeTab === 'pa';
@@ -247,22 +263,22 @@ export const DataflowPage: React.FC = () => {
                     <span className="billing-stat-value">{loading && !loaded ? '...' : isPA ? paTotal : fabricDataflows.length}</span>
                 </div>
                 {isPA ? (
-                    <>
-                        <div className="billing-stat-card">
-                            <div className="billing-stat-header">
-                                <span className="billing-stat-label">Active</span>
-                                <CheckCircle size={16} style={{ color: '#10b981' }} />
-                            </div>
-                            <span className="billing-stat-value">{paLoading && !paLoaded ? '...' : paActiveCount}</span>
+                    <div className="billing-stat-card">
+                        <div className="billing-stat-header">
+                            <span className="billing-stat-label">Owners</span>
+                            <Workflow size={16} style={{ color: '#60a5fa' }} />
                         </div>
-                        <div className="billing-stat-card">
-                            <div className="billing-stat-header">
-                                <span className="billing-stat-label">Owners</span>
-                                <Workflow size={16} style={{ color: '#60a5fa' }} />
-                            </div>
-                            <span className="billing-stat-value">{paLoading && !paLoaded ? '...' : paOwnerCount}</span>
+                        <span className="billing-stat-value">{paLoading && !paLoaded ? '...' : paOwnerCount}</span>
+                    </div>
+                ) : null}
+                {isPA ? (
+                    <div className="billing-stat-card">
+                        <div className="billing-stat-header">
+                            <span className="billing-stat-label">Scheduled</span>
+                            <CalendarClock size={16} style={{ color: '#f59e0b' }} />
                         </div>
-                    </>
+                        <span className="billing-stat-value">{paLoading && !paLoaded ? '...' : paScheduledCount}</span>
+                    </div>
                 ) : (
                     <div className="billing-stat-card">
                         <div className="billing-stat-header">
@@ -294,6 +310,19 @@ export const DataflowPage: React.FC = () => {
                     </button>
                 </div>
                 <div className="reports-header-actions">
+                    {isPA && (
+                        <div className="filter-chips">
+                            <button className={`filter-chip ${paStatusFilter === 'Success' ? 'filter-chip--active filter-chip--success' : ''}`} onClick={() => setPaStatusFilter(v => v === 'Success' ? 'all' : 'Success')}>
+                                <CheckCircle size={12} /> Success
+                            </button>
+                            <button className={`filter-chip ${paStatusFilter === 'Failed' ? 'filter-chip--active filter-chip--danger' : ''}`} onClick={() => setPaStatusFilter(v => v === 'Failed' ? 'all' : 'Failed')}>
+                                <XCircle size={12} /> Failed
+                            </button>
+                            <button className={`filter-chip ${paScheduleFilter === 'yes' ? 'filter-chip--active filter-chip--warn' : ''}`} onClick={() => setPaScheduleFilter(v => v === 'yes' ? 'all' : 'yes')}>
+                                <CalendarClock size={12} /> Scheduled
+                            </button>
+                        </div>
+                    )}
                     <div className="reports-search" style={{ width: 220 }}>
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter dataflows..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
@@ -301,6 +330,25 @@ export const DataflowPage: React.FC = () => {
                     <button onClick={() => reload(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
+                    {isPA && paGroups.length > 0 && (
+                        <button
+                            className="billing-refresh-btn"
+                            title="Copy danh sách đang filter"
+                            onClick={() => {
+                                const allDfs = paGroups.flatMap(([, items]) => items);
+                                const sections = paGroups.map(([owner, items]) => {
+                                    const lines = items.map(df =>
+                                        `- ${df.name} | Last Refresh: ${df.lastRefreshTime ? formatDateTime(df.lastRefreshTime) : '—'} | Schedule: ${df.hasSchedule ? 'Yes' : 'No'}`
+                                    );
+                                    return `Owner: ${owner}\n${lines.join('\n')}`;
+                                });
+                                const text = `Dataflow Report (${allDfs.length} items)\n${'—'.repeat(40)}\n\n${sections.join('\n\n')}`;
+                                navigator.clipboard.writeText(text);
+                            }}
+                        >
+                            <Copy size={14} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -323,7 +371,7 @@ export const DataflowPage: React.FC = () => {
                                 {expandedGroups[owner] && (
                                     <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
                                         <table className="billing-table">
-                                            <thead><tr><th>Name</th><th>Entities</th><th>Status</th><th>Created By</th><th>Modified By</th><th>Created On</th><th>Last Modified</th><th style={{ width: 36 }}></th></tr></thead>
+                                            <thead><tr><th>Name</th><th>Entities</th><th>Last Status</th><th>Last Refresh</th><th>Schedule</th><th>Modified By</th><th>Modified On</th><th style={{ width: 36 }}></th></tr></thead>
                                             <tbody>
                                                 {items.map(df => (
                                                     <tr key={df.id} className="clickable-row" onClick={() => setSelectedPA(df)}>
@@ -346,17 +394,24 @@ export const DataflowPage: React.FC = () => {
                                                             ) : '—'}
                                                         </td>
                                                         <td>
-                                                            <span className="status-badge" style={{
-                                                                color: (df.state === 'Activated' || df.state === 'Active') ? '#10b981' : '#f59e0b',
-                                                                background: (df.state === 'Activated' || df.state === 'Active') ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                                                            }}>
-                                                                {(df.state === 'Activated' || df.state === 'Active') ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                                                                {df.stateLabel}
-                                                            </span>
+                                                            {df.lastRefreshStatus ? (
+                                                                <span className={`status-badge ${df.lastRefreshStatus === 'Success' ? 'status-badge--success' : df.lastRefreshStatus === 'Failed' ? 'status-badge--danger' : 'status-badge--warn'}`}>
+                                                                    {df.lastRefreshStatus === 'Success' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                                                    {df.lastRefreshStatus}
+                                                                </span>
+                                                            ) : <span className="text-muted">—</span>}
                                                         </td>
-                                                        <td className="billing-table-type">{df.createdBy || '—'}</td>
+                                                        <td className="billing-table-type">{df.lastRefreshTime ? formatDateTime(df.lastRefreshTime) : '—'}</td>
+                                                        <td>
+                                                            {df.hasSchedule ? (
+                                                                <span className="status-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>
+                                                                    <CalendarClock size={12} /> Yes
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>—</span>
+                                                            )}
+                                                        </td>
                                                         <td className="billing-table-type">{df.modifiedBy || '—'}</td>
-                                                        <td className="billing-table-type">{formatDate(df.createdOn)}</td>
                                                         <td className="billing-table-type">{formatDate(df.lastModified)}</td>
                                                         <td>
                                                             <button
@@ -445,26 +500,83 @@ export const DataflowPage: React.FC = () => {
                             <button className="detail-sidebar-close" onClick={() => setSelectedPA(null)} title="Close"><X size={16} /></button>
                         </div>
                         <div className="detail-sidebar-body">
+                            {/* Basic Info */}
                             <div className="detail-section">
-                                <div className="detail-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div className="detail-section-title detail-section-title--flex">
                                     Dataflow Info
                                     <a href={`https://make.powerapps.com/environments/de210e4b-cd22-e605-91ca-8e841aad4b8e/dataflows/${selectedPA.id}/details`}
                                         target="_blank" rel="noopener noreferrer"
                                         title="Mở trong Power Apps"
-                                        style={{ color: '#a78bfa', lineHeight: 0 }}
+                                        className="detail-ext-link"
                                     >
                                         <ExternalLink size={14} />
                                     </a>
                                 </div>
                                 <div className="detail-meta-grid">
-                                    <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedPA.id}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Category</div><div className="meta-value">{selectedPA.category || '—'}</div></div>
+                                    <div className="detail-meta-item detail-meta-item--full"><div className="meta-label">ID</div><div className="meta-value meta-value--mono">{selectedPA.id}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Category</div><div className="meta-value">{selectedPA.category || 'Dataflow'}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Created By</div><div className="meta-value">{selectedPA.createdBy || '—'}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Created On</div><div className="meta-value">{formatDate(selectedPA.createdOn)}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Status</div><div className="meta-value">
+                                        <span className={`status-badge ${(selectedPA.state === 'Activated' || selectedPA.state === 'Active') ? 'status-badge--success' : 'status-badge--warn'}`}>
+                                            {(selectedPA.state === 'Activated' || selectedPA.state === 'Active') ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                                            {selectedPA.stateLabel}
+                                        </span>
+                                    </div></div>
                                 </div>
                             </div>
+
+                            {/* Entities */}
+                            {selectedPA.entityNames.length > 0 && (
+                                <div className="detail-section">
+                                    <div className="detail-section-title"><Database size={12} className="detail-section-icon" />Entities ({selectedPA.entityNames.length})</div>
+                                    <div className="detail-entity-tags">
+                                        {selectedPA.entityNames.map(e => (
+                                            <span key={e} className="detail-entity-tag">{e}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Refresh Schedule Info */}
+                            <div className="detail-section">
+                                <div className="detail-section-title"><CalendarClock size={12} className="detail-section-icon" />Refresh Schedule</div>
+                                {selectedPA.hasSchedule ? (
+                                    <div className="detail-schedule-info">
+                                        <div className="detail-schedule-badge">
+                                            <CalendarClock size={14} />
+                                            <span>Scheduled — detected from history</span>
+                                        </div>
+                                        <div className="detail-meta-grid">
+                                            {selectedPA.lastRefreshType && (
+                                                <div className="detail-meta-item"><div className="meta-label">Refresh Type</div><div className="meta-value">{selectedPA.lastRefreshType}</div></div>
+                                            )}
+                                            {selectedPA.lastRefreshStatus && (
+                                                <div className="detail-meta-item">
+                                                    <div className="meta-label">Last Status</div>
+                                                    <div className="meta-value">
+                                                        <span className={`status-badge ${selectedPA.lastRefreshStatus === 'Success' ? 'status-badge--success' : selectedPA.lastRefreshStatus === 'Failed' ? 'status-badge--danger' : 'status-badge--warn'}`}>
+                                                            {selectedPA.lastRefreshStatus === 'Success' ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                                                            {selectedPA.lastRefreshStatus}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {selectedPA.lastRefreshTime && (
+                                                <div className="detail-meta-item detail-meta-item--full"><div className="meta-label">Last Refresh</div><div className="meta-value">{formatDateTime(selectedPA.lastRefreshTime)}</div></div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="detail-empty-text">Không phát hiện lịch refresh (chỉ chạy thủ công)</p>
+                                )}
+                            </div>
+
+                            {/* Description */}
                             {selectedPA.description && (
                                 <div className="detail-section">
                                     <div className="detail-section-title">Description</div>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{selectedPA.description}</p>
+                                    <p className="detail-description">{selectedPA.description}</p>
                                 </div>
                             )}
                         </div>

@@ -19,6 +19,10 @@ export interface Dataflow {
     createdBy: string;
     modifiedBy: string;
     entityNames: string[];  // Unique entity/query names from refresh history
+    hasSchedule: boolean;   // Has scheduled refresh (RefreshType contains 'Scheduled')
+    lastRefreshType: string; // Most recent RefreshType
+    lastRefreshTime: string; // Most recent refresh StartTime
+    lastRefreshStatus: string; // Most recent refresh status
 }
 
 export interface FabricWorkspace {
@@ -101,13 +105,38 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
             console.log('[DataService] msdyn_dataflows:', ppData.value?.length || 0, 'items');
 
             const dataflows = (ppData.value || []).map((df: Record<string, unknown>) => {
-                // Extract unique entity names from refresh history JSON
+                // Extract unique entity names + schedule info from refresh history JSON
                 let entityNames: string[] = [];
+                let hasSchedule = false;
+                let lastRefreshType = '';
+                let lastRefreshTime = '';
+                let lastRefreshStatus = '';
                 try {
                     const histJson = df.msdyn_refreshhistory as string;
                     if (histJson) {
                         const hist = JSON.parse(histJson) as Array<Record<string, unknown>>;
                         const names = new Set<string>();
+
+                        // Sort by StartTime desc to get latest first
+                        const sorted = [...hist].sort((a, b) =>
+                            new Date(b.StartTime as string).getTime() - new Date(a.StartTime as string).getTime()
+                        );
+
+                        // Get latest refresh info
+                        if (sorted.length > 0) {
+                            lastRefreshType = (sorted[0].RefreshType as string || '').replace('RefreshType', '');
+                            lastRefreshTime = sorted[0].StartTime as string || '';
+                            lastRefreshStatus = sorted[0].RefreshStatus as string || '';
+                        }
+
+                        // Check if any entry has Scheduled refresh type
+                        // Actual values: RefreshTypeTimeBased, RefreshTypeIntervalBased (= scheduled)
+                        //                RefreshTypeOneTime (= manual)
+                        hasSchedule = sorted.some(h => {
+                            const rt = (h.RefreshType as string || '').toLowerCase();
+                            return rt.includes('timebased') || rt.includes('intervalbased');
+                        });
+
                         for (const h of hist) {
                             const entities = (h.EntitiesRefreshHistory as Array<Record<string, unknown>>) || [];
                             for (const e of entities) {
@@ -132,6 +161,10 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
                     createdBy: (df['_createdby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
                     modifiedBy: (df['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
                     entityNames,
+                    hasSchedule,
+                    lastRefreshType,
+                    lastRefreshTime,
+                    lastRefreshStatus,
                 };
             });
 
@@ -178,6 +211,10 @@ export async function fetchDataflows(accessToken: string): Promise<{ dataflows: 
         createdBy: (df['_createdby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
         modifiedBy: (df['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] as string) || '',
         entityNames: [],
+        hasSchedule: false,
+        lastRefreshType: '',
+        lastRefreshTime: '',
+        lastRefreshStatus: '',
     }));
 
     // Dedupe by name — keep latest modified per name

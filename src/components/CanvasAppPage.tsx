@@ -161,8 +161,8 @@ export const CanvasAppPage: React.FC = () => {
                                                     <th>Type</th>
                                                     <th>Status</th>
                                                     <th>Shared Users</th>
-                                                    <th>Last Modified</th>
                                                     <th>Created</th>
+                                                    <th>Last Modified</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -187,8 +187,8 @@ export const CanvasAppPage: React.FC = () => {
                                                             </span>
                                                         </td>
                                                         <td className="billing-table-type">{app.sharedUsersCount || 0}</td>
-                                                        <td className="billing-table-type">{formatDate(app.lastModifiedTime)}</td>
                                                         <td className="billing-table-type">{formatDate(app.createdTime)}</td>
+                                                        <td className="billing-table-type">{formatDate(app.lastModifiedTime)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -252,8 +252,8 @@ export const CanvasAppPage: React.FC = () => {
                                         </span>
                                     </div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Type</div><div className="meta-value">{selectedItem.appType || 'Canvas App'}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Last Modified</div><div className="meta-value">{formatDate(selectedItem.lastModifiedTime)}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Created</div><div className="meta-value">{formatDate(selectedItem.createdTime)}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Last Modified</div><div className="meta-value">{formatDate(selectedItem.lastModifiedTime)}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Shared Users</div><div className="meta-value">{selectedItem.sharedUsersCount}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Shared Groups</div><div className="meta-value">{selectedItem.sharedGroupsCount}</div></div>
                                 </div>

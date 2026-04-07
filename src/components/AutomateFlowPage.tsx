@@ -4,15 +4,27 @@ import {
     Zap, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, User, Copy, Check,
     ChevronDown, ChevronRight, ExternalLink, Clock, History,
+    BarChart3, List, Loader2,
 } from 'lucide-react';
 import type { FlowDefinition, FlowRun } from '@/services/azure/powerPlatformService';
 import { fetchFlows, fetchFlowRuns, fetchFlowRunTriggerOutput } from '@/services/azure/powerPlatformService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { dataverseConfig, powerAutomateConfig } from '@/config/authConfig';
 import { getCache, setCache, clearCache } from '@/services/cache';
+import { FlowOverview } from '@/components/flow/FlowOverview';
+import { FlowStructureViewer } from '@/components/flow/FlowStructureViewer';
+import {
+    fetchFlowMetadata,
+    parseFlowStructure,
+    parseRunError,
+    formatDuration,
+    type FlowStructure,
+} from '@/services/azure/flowAnalyticsService';
 
 const CACHE_KEY = 'automate_flows';
+type TabType = 'overview' | 'list';
 
+/* ─── Formatters ─── */
 function formatDate(dateStr: string): string {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -23,6 +35,7 @@ function formatDateTime(dateStr: string): string {
     return new Date(dateStr).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+/* ─── Copy Button ─── */
 const CopyButton: React.FC<{ text: string; label?: string }> = ({ text, label }) => {
     const [copied, setCopied] = useState(false);
     const handleCopy = async () => {
@@ -35,14 +48,17 @@ const CopyButton: React.FC<{ text: string; label?: string }> = ({ text, label })
     return (
         <button
             onClick={handleCopy}
-            className="billing-refresh-btn"
-            style={{ padding: '4px 6px', lineHeight: 0 }}
+            className={`action-icon-btn ${copied ? 'text-success' : ''}`}
             title={copied ? 'Copied!' : `Copy ${label || ''}`}
         >
-            {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+            {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
     );
 };
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN PAGE — AutomateFlowPage
+   ═══════════════════════════════════════════════════════════ */
 
 export const AutomateFlowPage: React.FC = () => {
     const { instance, accounts } = useMsal();
@@ -56,9 +72,10 @@ export const AutomateFlowPage: React.FC = () => {
     const [search, setSearch] = useState('');
     const [selectedFlow, setSelectedFlow] = useState<FlowDefinition | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [activeTab, setActiveTab] = useState<TabType>('overview');
     const loaded = cached !== null;
 
-    // History popup state (center modal)
+    // History popup state
     const [historyName, setHistoryName] = useState('');
     const [historyRuns, setHistoryRuns] = useState<FlowRun[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -70,55 +87,11 @@ export const AutomateFlowPage: React.FC = () => {
     const [triggerOutput, setTriggerOutput] = useState<Record<string, unknown> | null>(null);
     const [triggerLoading, setTriggerLoading] = useState(false);
 
-    // Open history popup (lazy load)
-    const openHistory = useCallback(async (flow: FlowDefinition) => {
-        setHistoryName(flow.name);
-        setHistoryOpen(true);
-        setHistoryRuns([]);
-        setHistoryLoading(true);
-        try {
-            const token = await acquireToken(instance, accounts[0], powerAutomateConfig.scopes);
-            const runs = await fetchFlowRuns(token, flow.id);
-            setHistoryRuns(runs);
-        } catch (err) {
-            console.warn('Failed to load flow runs:', err);
-        } finally {
-            setHistoryLoading(false);
-        }
-    }, [instance, accounts]);
+    // Flow structure (sidebar)
+    const [flowStructure, setFlowStructure] = useState<FlowStructure | null>(null);
+    const [structureLoading, setStructureLoading] = useState(false);
 
-    // Toggle expand run → lazy load trigger output
-    const toggleRunExpand = useCallback(async (run: FlowRun) => {
-        if (expandedRunId === run.id) {
-            setExpandedRunId(null);
-            setTriggerOutput(null);
-            return;
-        }
-        setExpandedRunId(run.id);
-        setTriggerOutput(null);
-        setTriggerLoading(true);
-        try {
-            const output = await fetchFlowRunTriggerOutput(run.triggerOutputsLink);
-            setTriggerOutput(output);
-        } catch {
-            setTriggerOutput(null);
-        } finally {
-            setTriggerLoading(false);
-        }
-    }, [expandedRunId]);
-
-    // Filter runs by search keyword
-    const filteredRuns = useMemo(() => {
-        if (!historySearch.trim()) return historyRuns;
-        const q = historySearch.toLowerCase();
-        return historyRuns.filter(r =>
-            r.status.toLowerCase().includes(q) ||
-            r.trigger.toLowerCase().includes(q) ||
-            r.id.toLowerCase().includes(q) ||
-            r.startedOn.toLowerCase().includes(q)
-        );
-    }, [historyRuns, historySearch]);
-
+    // ─── Data Loading ───
     const loadData = useCallback(async (force = false) => {
         if (!isAuthenticated || accounts.length === 0) return;
         if (!force && loaded) return;
@@ -140,7 +113,71 @@ export const AutomateFlowPage: React.FC = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // Group by owner
+    // ─── History ───
+    const openHistory = useCallback(async (flow: FlowDefinition) => {
+        setHistoryName(flow.name);
+        setHistoryOpen(true);
+        setHistoryRuns([]);
+        setHistoryLoading(true);
+        setHistorySearch('');
+        try {
+            const token = await acquireToken(instance, accounts[0], powerAutomateConfig.scopes);
+            const runs = await fetchFlowRuns(token, flow.id);
+            setHistoryRuns(runs);
+        } catch (err) {
+            console.warn('Failed to load flow runs:', err);
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, [instance, accounts]);
+
+    const toggleRunExpand = useCallback(async (run: FlowRun) => {
+        if (expandedRunId === run.id) {
+            setExpandedRunId(null);
+            setTriggerOutput(null);
+            return;
+        }
+        setExpandedRunId(run.id);
+        setTriggerOutput(null);
+        setTriggerLoading(true);
+        try {
+            const output = await fetchFlowRunTriggerOutput(run.triggerOutputsLink);
+            setTriggerOutput(output);
+        } catch {
+            setTriggerOutput(null);
+        } finally {
+            setTriggerLoading(false);
+        }
+    }, [expandedRunId]);
+
+    const filteredRuns = useMemo(() => {
+        if (!historySearch.trim()) return historyRuns;
+        const q = historySearch.toLowerCase();
+        return historyRuns.filter(r =>
+            r.status.toLowerCase().includes(q) ||
+            r.trigger.toLowerCase().includes(q) ||
+            r.id.toLowerCase().includes(q) ||
+            r.startedOn.toLowerCase().includes(q)
+        );
+    }, [historyRuns, historySearch]);
+
+    // ─── Flow Detail ───
+    const handleSelectFlow = useCallback(async (flow: FlowDefinition) => {
+        setSelectedFlow(flow);
+        setFlowStructure(null);
+        setStructureLoading(true);
+        try {
+            const metadata = await fetchFlowMetadata(instance, accounts[0], flow.id);
+            const structure = parseFlowStructure(metadata);
+            setFlowStructure(structure);
+        } catch {
+            setFlowStructure(null);
+        } finally {
+            setStructureLoading(false);
+        }
+    }, [instance, accounts]);
+
+    // ─── Group by owner ───
     const ownerGroups = useMemo(() => {
         const filtered = search
             ? flows.filter(f =>
@@ -164,7 +201,6 @@ export const AutomateFlowPage: React.FC = () => {
         setExpandedGroups(prev => prev[key] ? {} : { [key]: true });
     };
 
-    // Auto-open 'Operation' group by default
     useEffect(() => {
         if (Object.keys(expandedGroups).length > 0) return;
         if (ownerGroups.length === 0) return;
@@ -177,224 +213,213 @@ export const AutomateFlowPage: React.FC = () => {
     const draftCount = flows.filter(f => f.state !== 'Activated').length;
     const ownerCount = new Set(flows.map(f => f.owner).filter(Boolean)).size;
 
+    /* ═══ RENDER ═══ */
     return (
-        <div className="health-page">
-            <div className="billing-stats">
-                <div className="billing-stat-card">
-                    <div className="billing-stat-header">
-                        <span className="billing-stat-label">Total Flows</span>
-                        <Zap size={16} style={{ color: '#a78bfa' }} />
-                    </div>
-                    <span className="billing-stat-value">{loading && !loaded ? '...' : total}</span>
-                </div>
-                <div className="billing-stat-card">
-                    <div className="billing-stat-header">
-                        <span className="billing-stat-label">Active</span>
-                        <CheckCircle size={16} style={{ color: '#10b981' }} />
-                    </div>
-                    <span className="billing-stat-value">{loading && !loaded ? '...' : activeCount}</span>
-                </div>
-                <div className="billing-stat-card">
-                    <div className="billing-stat-header">
-                        <span className="billing-stat-label">Draft</span>
-                        <XCircle size={16} style={{ color: '#f59e0b' }} />
-                    </div>
-                    <span className="billing-stat-value">{loading && !loaded ? '...' : draftCount}</span>
-                </div>
-                <div className="billing-stat-card">
-                    <div className="billing-stat-header">
-                        <span className="billing-stat-label">Owners</span>
-                        <User size={16} style={{ color: '#60a5fa' }} />
-                    </div>
-                    <span className="billing-stat-value">{loading && !loaded ? '...' : ownerCount}</span>
-                </div>
+        <div className="list-view-container" style={{ padding: '0.75rem 1.25rem' }}>
+
+            {/* ── KPI Strip ── */}
+            <div className="flow-kpi-strip">
+                <KpiCard icon={<Zap size={18} />} label="Total Flows" value={loading && !loaded ? '...' : total.toString()} colorClass="accent" />
+                <KpiCard icon={<CheckCircle size={18} />} label="Active" value={loading && !loaded ? '...' : activeCount.toString()} colorClass="success" />
+                <KpiCard icon={<XCircle size={18} />} label="Draft" value={loading && !loaded ? '...' : draftCount.toString()} colorClass="warning" />
+                <KpiCard icon={<User size={18} />} label="Owners" value={loading && !loaded ? '...' : ownerCount.toString()} colorClass="accent" />
             </div>
 
+            {/* ── Error Banner ── */}
             {error && (
-                <div className="billing-error">
-                    <AlertTriangle size={20} />
-                    <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                <div className="flow-error-banner">
+                    <AlertTriangle size={18} />
+                    <div style={{ flex: 1 }}>
+                        <strong>Không thể tải dữ liệu</strong>
+                        <p className="text-text-muted" style={{ marginTop: 2 }}>{error}</p>
+                    </div>
+                    <button onClick={() => loadData(true)} className="action-icon-btn" style={{ gap: 4, display: 'flex', alignItems: 'center' }}>
+                        <RefreshCw size={12} /> Thử lại
+                    </button>
                 </div>
             )}
 
-            <div className="reports-header">
-                <div className="logs-tabs" />
-                <div className="reports-header-actions">
-                    <div className="reports-search" style={{ width: 220 }}>
-                        <Search size={14} className="reports-search-icon" />
-                        <input type="text" placeholder="Filter flows..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
+            {/* ── Tab Bar + Actions ── */}
+            <div className="list-view-header" style={{ borderBottom: 'none', marginBottom: '0.5rem' }}>
+                <div className="list-view-toolbar">
+                    <div className="sub-tabs">
+                        <button className={`sub-tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+                            <BarChart3 size={14} style={{ marginRight: 4 }} /> Overview
+                        </button>
+                        <button className={`sub-tab ${activeTab === 'list' ? 'active' : ''}`} onClick={() => setActiveTab('list')}>
+                            <List size={14} style={{ marginRight: 4 }} /> Flow List
+                        </button>
                     </div>
-                    <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
-                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                </div>
+                <div className="list-view-actions">
+                    {activeTab === 'list' && (
+                        <div className="list-view-search">
+                            <Search size={14} className="list-view-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Filter flows..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                            {search && (
+                                <button onClick={() => setSearch('')} className="list-view-search-clear">
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    <button onClick={() => loadData(true)} disabled={loading} className="action-icon-btn" title="Refresh">
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
             </div>
 
+            {/* ── Loading ── */}
             {loading && !loaded && (
-                <div className="billing-loading"><div className="spinner"></div><p>Đang tải flows...</p></div>
-            )}
-
-            {/* Flow list grouped by owner */}
-            {(loaded || flows.length > 0) && (
-                <div className="billing-section">
-                    <div className="reports-sidebar-list" style={{ maxHeight: 'none' }}>
-                        {ownerGroups.map(([owner, items]) => (
-                            <div key={owner} className="reports-ws-group">
-                                <button className="reports-ws-header" onClick={() => toggleGroup(owner)}>
-                                    {expandedGroups[owner] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    <span className="reports-ws-name">{owner}</span>
-                                    <span className="reports-ws-count">{items.length}</span>
-                                </button>
-
-                                {expandedGroups[owner] && (
-                                    <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
-                                        <table className="billing-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Status</th>
-                                                    <th>Created By</th>
-                                                    <th>Modified By</th>
-                                                    <th>Created On</th>
-                                                    <th>Last Modified</th>
-                                                    <th style={{ width: 36 }}></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {items.map(flow => (
-                                                    <tr key={flow.id} className="clickable-row" onClick={() => setSelectedFlow(flow)}>
-                                                        <td className="billing-table-name">{flow.name}</td>
-                                                        <td>
-                                                            <span className="status-badge" style={{
-                                                                color: flow.state === 'Activated' ? '#10b981' : '#f59e0b',
-                                                                background: flow.state === 'Activated' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                                                            }}>
-                                                                {flow.state === 'Activated' ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                                                                {flow.stateLabel}
-                                                            </span>
-                                                        </td>
-                                                        <td className="billing-table-type">{flow.createdBy || '—'}</td>
-                                                        <td className="billing-table-type">{flow.modifiedBy || '—'}</td>
-                                                        <td className="billing-table-type">{formatDate(flow.createdOn)}</td>
-                                                        <td className="billing-table-type">{formatDate(flow.lastModified)}</td>
-                                                        <td>
-                                                            <button
-                                                                className="billing-refresh-btn"
-                                                                style={{ padding: '4px', lineHeight: 0 }}
-                                                                title="Xem Run History"
-                                                                onClick={(e) => { e.stopPropagation(); openHistory(flow); }}
-                                                            >
-                                                                <History size={13} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        {ownerGroups.length === 0 && !loading && (
-                            <div className="billing-loading" style={{ padding: '2rem' }}>
-                                <Zap size={24} style={{ opacity: 0.3 }} />
-                                <p>{search ? `Không tìm thấy "${search}"` : 'Chưa có flow nào'}</p>
-                            </div>
-                        )}
-                    </div>
+                <div className="list-view-empty-state">
+                    <Loader2 size={20} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                    <p>Đang tải flows...</p>
                 </div>
             )}
 
-            {/* Detail sidebar */}
+            {/* ── Tab Content ── */}
+            {(loaded || flows.length > 0) && (
+                <>
+                    {activeTab === 'overview' && <FlowOverview flows={flows} />}
+
+                    {activeTab === 'list' && (
+                        <div className="list-view-table-wrapper">
+                            {ownerGroups.length === 0 && !loading ? (
+                                <div className="list-view-empty-state">
+                                    <Search size={28} style={{ opacity: 0.3 }} />
+                                    <p>{search ? `Không tìm thấy "${search}"` : 'Chưa có flow nào'}</p>
+                                </div>
+                            ) : (
+                                <div className="reports-sidebar-list" style={{ maxHeight: 'none' }}>
+                                    {ownerGroups.map(([owner, items]) => (
+                                        <div key={owner} className="reports-ws-group">
+                                            <button className="reports-ws-header" onClick={() => toggleGroup(owner)}>
+                                                {expandedGroups[owner] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                                <span className="reports-ws-name">{owner}</span>
+                                                <span className="reports-ws-count">{items.length}</span>
+                                            </button>
+                                            {expandedGroups[owner] && (
+                                                <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
+                                                    <table className="billing-table">
+                                                        <thead><tr><th>Name</th><th>Status</th><th>Created By</th><th>Created</th><th>Modified By</th><th>Modified</th><th style={{ width: 40 }}></th></tr></thead>
+                                                        <tbody>
+                                                            {items.map(flow => (
+                                                                <tr key={flow.id} className="clickable-row" onClick={() => handleSelectFlow(flow)}>
+                                                                    <td className="billing-table-name">{flow.name}</td>
+                                                                    <td>
+                                                                        <span className={`status-badge ${flow.state === 'Activated' ? 'status-approved' : 'status-pending'}`}>
+                                                                            {flow.state === 'Activated' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                                                            {flow.stateLabel}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="billing-table-type">{flow.createdBy || '—'}</td>
+                                                                    <td className="billing-table-type">{formatDate(flow.createdOn)}</td>
+                                                                    <td className="billing-table-type">{flow.modifiedBy || '—'}</td>
+                                                                    <td className="billing-table-type">{formatDate(flow.lastModified)}</td>
+                                                                    <td>
+                                                                        <button
+                                                                            className="billing-refresh-btn"
+                                                                            style={{ padding: '4px', lineHeight: 0 }}
+                                                                            title="Run History"
+                                                                            onClick={e => { e.stopPropagation(); openHistory(flow); }}
+                                                                        >
+                                                                            <History size={13} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* ═══ Detail Sidebar (RIGHT PANEL) ═══ */}
             {selectedFlow && (
                 <>
-                    <div className="detail-sidebar-overlay" onClick={() => setSelectedFlow(null)} />
-                    <div className="detail-sidebar">
-                        <div className="detail-sidebar-header">
+                    <div className="flow-sidebar-backdrop" onClick={() => setSelectedFlow(null)} />
+                    <div className="flow-sidebar-panel">
+                        {/* Header */}
+                        <div className="flow-sidebar-header">
                             <h3>{selectedFlow.name}</h3>
-                            <button className="detail-sidebar-close" onClick={() => setSelectedFlow(null)} title="Close"><X size={16} /></button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <a
+                                    href={`https://make.powerautomate.com/manage/flows/${selectedFlow.id}/details`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="action-icon-link"
+                                    title="Open in Power Automate"
+                                >
+                                    <ExternalLink size={14} />
+                                </a>
+                                <button className="close-modal-btn" onClick={() => setSelectedFlow(null)}>&times;</button>
+                            </div>
                         </div>
-                        <div className="detail-sidebar-body">
-                            <div className="detail-section">
-                                <div className="detail-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    Flow Info
-                                    <a href={`https://make.powerautomate.com/manage/flows/${selectedFlow.id}/details`}
-                                        target="_blank" rel="noopener noreferrer"
-                                        title="Mở trong Power Automate"
-                                        style={{ color: '#a78bfa', lineHeight: 0 }}
-                                    >
-                                        <ExternalLink size={14} />
-                                    </a>
+
+                        {/* Body */}
+                        <div className="flow-sidebar-body">
+                            {/* Flow Info */}
+                            <div className="flow-detail-section">
+                                <div className="flow-detail-section-header"><span>Flow Info</span></div>
+                                <div className="detail-field">
+                                    <label className="detail-label">ID</label>
+                                    <div className="detail-value mono">{selectedFlow.id}</div>
                                 </div>
-                                <div className="detail-meta-grid">
-                                    <div className="detail-meta-item">
-                                        <div className="meta-label">ID</div>
-                                        <div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFlow.id}</div>
+                                {selectedFlow.solutionId && (
+                                    <div className="detail-field">
+                                        <label className="detail-label">Solution ID</label>
+                                        <div className="detail-value mono">{selectedFlow.solutionId}</div>
                                     </div>
-                                    {selectedFlow.solutionId && (
-                                        <div className="detail-meta-item">
-                                            <div className="meta-label">Solution ID</div>
-                                            <div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFlow.solutionId}</div>
-                                        </div>
-                                    )}
-                                    {selectedFlow.description && (
-                                        <div className="detail-meta-item">
-                                            <div className="meta-label">Description</div>
-                                            <div className="meta-value" style={{ whiteSpace: 'pre-wrap', fontSize: '11px' }}>{selectedFlow.description}</div>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
+                                {selectedFlow.description && (
+                                    <div className="detail-field">
+                                        <label className="detail-label">Description</label>
+                                        <div className="detail-value">{selectedFlow.description}</div>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="detail-section">
-                                <div className="detail-section-title">People</div>
-                                <div className="detail-meta-grid">
-                                    <div className="detail-meta-item">
-                                        <div className="meta-label">Created By</div>
-                                        <div className="meta-value">{selectedFlow.createdBy || '—'}</div>
+                            {/* Dates */}
+                            <div className="flow-detail-section">
+                                <div className="flow-detail-section-header"><span>Dates</span></div>
+                                <div className="flow-detail-grid">
+                                    <div className="detail-field">
+                                        <label className="detail-label">Created</label>
+                                        <div className="detail-value highlight">{formatDateTime(selectedFlow.createdOn)}</div>
                                     </div>
-                                    <div className="detail-meta-item">
-                                        <div className="meta-label">Modified By</div>
-                                        <div className="meta-value">{selectedFlow.modifiedBy || '—'}</div>
+                                    <div className="detail-field">
+                                        <label className="detail-label">Last Modified</label>
+                                        <div className="detail-value highlight">{formatDateTime(selectedFlow.lastModified)}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="detail-section">
-                                <div className="detail-section-title">Dates</div>
-                                <div className="detail-meta-grid">
-                                    <div className="detail-meta-item">
-                                        <div className="meta-label">Created</div>
-                                        <div className="meta-value">{formatDateTime(selectedFlow.createdOn)}</div>
-                                    </div>
-                                    <div className="detail-meta-item">
-                                        <div className="meta-label">Last Modified</div>
-                                        <div className="meta-value">{formatDateTime(selectedFlow.lastModified)}</div>
-                                    </div>
-                                </div>
+                            {/* Structure */}
+                            <div className="flow-detail-section">
+                                <div className="flow-detail-section-header"><span>Structure</span></div>
+                                <FlowStructureViewer structure={flowStructure || { trigger: null, actions: [] }} loading={structureLoading} />
                             </div>
 
+                            {/* Technical Data */}
                             {selectedFlow.clientData && (
-                                <div className="detail-section">
-                                    <div className="detail-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        Technical Data
+                                <div className="flow-detail-section">
+                                    <div className="flow-detail-section-header">
+                                        <span>Technical Data</span>
                                         <CopyButton text={selectedFlow.clientData} label="JSON" />
                                     </div>
-                                    <pre style={{
-                                        fontSize: '11px',
-                                        lineHeight: 1.4,
-                                        background: 'rgba(0,0,0,0.3)',
-                                        border: '1px solid rgba(255,255,255,0.06)',
-                                        borderRadius: 8,
-                                        padding: '10px 12px',
-                                        maxHeight: 300,
-                                        overflow: 'auto',
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-all',
-                                        color: 'var(--text-secondary)',
-                                        margin: 0,
-                                    }}>
+                                    <pre className="flow-json-block">
                                         {(() => { try { return JSON.stringify(JSON.parse(selectedFlow.clientData), null, 2); } catch { return selectedFlow.clientData; } })()}
                                     </pre>
                                 </div>
@@ -404,120 +429,107 @@ export const AutomateFlowPage: React.FC = () => {
                 </>
             )}
 
-            {/* History Center Popup */}
+            {/* ═══ History Modal ═══ */}
             {historyOpen && (
-                <>
-                    <div className="detail-sidebar-overlay" onClick={() => setHistoryOpen(false)} />
-                    <div className="history-modal">
-                        <div className="history-modal-header">
-                            <h3><History size={16} /> {historyName}</h3>
-                            <button className="detail-sidebar-close" onClick={() => setHistoryOpen(false)} title="Close"><X size={16} /></button>
+                <div className="modal-overlay" onClick={() => setHistoryOpen(false)}>
+                    <div className="modal-content flow-history-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <History size={16} className="text-accent" /> {historyName}
+                            </h3>
+                            <button className="close-modal-btn" onClick={() => setHistoryOpen(false)}>&times;</button>
                         </div>
-                        <div className="history-modal-body">
-                            {/* Search bar */}
-                            <div style={{ marginBottom: '0.75rem' }}>
-                                <div className="reports-search" style={{ width: '100%' }}>
-                                    <Search size={14} className="reports-search-icon" />
-                                    <input
-                                        type="text"
-                                        placeholder="Filter by status, trigger, ID..."
-                                        value={historySearch}
-                                        onChange={e => setHistorySearch(e.target.value)}
-                                        className="reports-search-input"
-                                    />
-                                    {historySearch && (
-                                        <button onClick={() => setHistorySearch('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', lineHeight: 0 }}>
-                                            <X size={12} />
-                                        </button>
-                                    )}
-                                </div>
+                        <div className="modal-body" style={{ padding: '1rem 1.25rem' }}>
+                            {/* Search */}
+                            <div className="list-view-search" style={{ maxWidth: '100%', marginBottom: '0.75rem' }}>
+                                <Search size={14} className="list-view-search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Filter by status, trigger, ID..."
+                                    value={historySearch}
+                                    onChange={e => setHistorySearch(e.target.value)}
+                                />
+                                {historySearch && (
+                                    <button onClick={() => setHistorySearch('')} className="list-view-search-clear">
+                                        <X size={12} />
+                                    </button>
+                                )}
                             </div>
+
                             {historyLoading ? (
-                                <div className="billing-loading" style={{ padding: '2rem' }}>
-                                    <RefreshCw size={16} className="spin" />
+                                <div className="list-view-empty-state" style={{ padding: '2rem' }}>
+                                    <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
                                     <p>Đang tải lịch sử...</p>
                                 </div>
                             ) : filteredRuns.length > 0 ? (
-                                <div className="billing-table-wrapper">
-                                    <table className="billing-table">
+                                <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                    <table className="list-view-table">
                                         <thead>
-                                            <tr><th>Status</th><th>Trigger</th><th>Started</th><th>Duration</th><th style={{ width: 30 }}></th></tr>
+                                            <tr>
+                                                <th>Status</th>
+                                                <th>Trigger</th>
+                                                <th>Started</th>
+                                                <th>Duration</th>
+                                                <th style={{ width: 32 }}></th>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             {filteredRuns.map(run => {
                                                 const isOk = run.status === 'Succeeded';
                                                 const isFail = ['Failed', 'Faulted', 'TimedOut', 'Aborted'].includes(run.status);
                                                 const duration = run.startedOn && run.completedOn
-                                                    ? (() => {
-                                                        const ms = new Date(run.completedOn).getTime() - new Date(run.startedOn).getTime();
-                                                        if (ms < 1000) return `${ms}ms`;
-                                                        if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-                                                        return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
-                                                    })()
+                                                    ? formatDuration(new Date(run.completedOn).getTime() - new Date(run.startedOn).getTime())
                                                     : '—';
                                                 const isExpanded = expandedRunId === run.id;
+                                                const errorInfo = isFail ? parseRunError(run as unknown as import('@/services/azure/flowAnalyticsService').FlowRun) : null;
+
                                                 return (
                                                     <React.Fragment key={run.id}>
                                                         <tr
-                                                            className="clickable-row"
                                                             onClick={() => toggleRunExpand(run)}
+                                                            className={isExpanded ? 'active-row' : ''}
                                                             title={run.errorMessage || 'Click to view trigger data'}
-                                                            style={isExpanded ? { background: 'rgba(167,139,250,0.06)' } : undefined}
                                                         >
                                                             <td>
-                                                                <span className="status-badge" style={{
-                                                                    color: isOk ? '#10b981' : isFail ? '#ef4444' : '#f59e0b',
-                                                                    background: isOk ? 'rgba(16,185,129,0.1)' : isFail ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                                                                }}>
-                                                                    {isOk ? <CheckCircle size={11} /> : isFail ? <XCircle size={11} /> : <Clock size={11} />}
+                                                                <span className={`status-badge ${isOk ? 'status-approved' : isFail ? 'status-rejected' : 'status-pending'}`}>
+                                                                    {isOk ? <CheckCircle size={12} /> : isFail ? <XCircle size={12} /> : <Clock size={12} />}
                                                                     {run.status}
                                                                 </span>
                                                             </td>
-                                                            <td style={{ fontSize: '11px' }}>{run.trigger || '—'}</td>
-                                                            <td style={{ fontSize: '11px' }}>{formatDateTime(run.startedOn)}</td>
-                                                            <td style={{ fontSize: '11px' }}>{duration}</td>
+                                                            <td>{run.trigger || '—'}</td>
+                                                            <td>{formatDateTime(run.startedOn)}</td>
+                                                            <td>{duration}</td>
                                                             <td>
-                                                                {isExpanded ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />}
+                                                                {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                                                             </td>
                                                         </tr>
                                                         {isExpanded && (
                                                             <tr>
                                                                 <td colSpan={5} style={{ padding: 0 }}>
-                                                                    <div style={{
-                                                                        padding: '0.75rem 1rem',
-                                                                        background: 'rgba(0,0,0,0.25)',
-                                                                        borderTop: '1px solid rgba(255,255,255,0.04)',
-                                                                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                                                                    }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                                            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                                                                Trigger Output
-                                                                            </span>
+                                                                    <div className="flow-run-expand">
+                                                                        {errorInfo && (
+                                                                            <div style={{ marginBottom: '0.75rem' }}>
+                                                                                <div className="detail-label" style={{ marginBottom: 4 }}>Error Details</div>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                                                    <span className="status-badge status-rejected" style={{ fontSize: '0.7rem' }}>{errorInfo.code}</span>
+                                                                                    <span className="text-text-muted">Action:</span>
+                                                                                    <span>{errorInfo.action}</span>
+                                                                                </div>
+                                                                                <p className="text-text-muted" style={{ fontSize: '0.8rem', wordBreak: 'break-word' }}>{errorInfo.message}</p>
+                                                                            </div>
+                                                                        )}
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <span className="detail-label">Trigger Output</span>
                                                                             {triggerOutput && <CopyButton text={JSON.stringify(triggerOutput, null, 2)} label="JSON" />}
                                                                         </div>
                                                                         {triggerLoading ? (
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                                                                <RefreshCw size={12} className="spin" /> Loading...
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
+                                                                                <Loader2 size={12} className="animate-spin" /> Loading...
                                                                             </div>
                                                                         ) : triggerOutput ? (
-                                                                            <pre style={{
-                                                                                fontSize: '11px',
-                                                                                lineHeight: 1.4,
-                                                                                background: 'rgba(0,0,0,0.3)',
-                                                                                border: '1px solid rgba(255,255,255,0.06)',
-                                                                                borderRadius: 8,
-                                                                                padding: '10px 12px',
-                                                                                maxHeight: 360,
-                                                                                overflow: 'auto',
-                                                                                whiteSpace: 'pre-wrap',
-                                                                                wordBreak: 'break-all',
-                                                                                color: 'var(--text-secondary)',
-                                                                                margin: 0,
-                                                                            }}>
-                                                                                {JSON.stringify(triggerOutput, null, 2)}
-                                                                            </pre>
+                                                                            <pre className="flow-json-block">{JSON.stringify(triggerOutput, null, 2)}</pre>
                                                                         ) : (
-                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No trigger output available</div>
+                                                                            <div className="text-text-muted" style={{ fontSize: '0.8rem' }}>No trigger output available</div>
                                                                         )}
                                                                     </div>
                                                                 </td>
@@ -530,15 +542,32 @@ export const AutomateFlowPage: React.FC = () => {
                                     </table>
                                 </div>
                             ) : (
-                                <div className="billing-loading" style={{ padding: '2rem' }}>
-                                    <Clock size={20} style={{ opacity: 0.3 }} />
+                                <div className="list-view-empty-state" style={{ padding: '2rem' }}>
+                                    <Clock size={22} style={{ opacity: 0.3 }} />
                                     <p>Chưa có lịch sử chạy</p>
                                 </div>
                             )}
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );
 };
+
+/* ═══════════════════════════════════════════════
+   SUB-COMPONENTS
+   ═══════════════════════════════════════════════ */
+
+/* ── KPI Card ── */
+function KpiCard({ icon, label, value, colorClass }: { icon: React.ReactNode; label: string; value: string; colorClass: string }) {
+    return (
+        <div className={`flow-kpi-card flow-kpi-${colorClass}`}>
+            <div className="flow-kpi-top">
+                <span className="flow-kpi-label">{label}</span>
+                <span className="flow-kpi-icon">{icon}</span>
+            </div>
+            <span className="flow-kpi-value">{value}</span>
+        </div>
+    );
+}

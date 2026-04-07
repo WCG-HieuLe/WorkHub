@@ -463,8 +463,14 @@ export const LogsPage: React.FC = () => {
                             <tbody>
                                 {displayLogs.map(log => (
                                     <tr key={log.id}>
-                                        <td className="billing-table-type">
-                                            <Clock size={12} /> {log.timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        <td className="billing-table-type" style={{ whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Clock size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
+                                                <div style={{ lineHeight: 1.4 }}>
+                                                    <div>{log.timestamp.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                                                    <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>{log.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="billing-table-name">{log.user.name}</td>
                                         <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{log.tableName}</td>

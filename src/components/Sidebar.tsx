@@ -12,6 +12,8 @@ import {
     Workflow,
     Zap,
     AppWindow,
+    ScanSearch,
+    Plug,
     // Dev Tools
     Code,
     // Settings
@@ -72,6 +74,8 @@ const navGroups: NavGroup[] = [
             { path: ROUTES.OPS_DATAFLOW, label: 'Dataflow', icon: <Workflow size={16} /> },
             { path: ROUTES.OPS_AUTOMATE, label: 'Automate Flow', icon: <Zap size={16} /> },
             { path: ROUTES.OPS_CANVAS_APP, label: 'Canvas App', icon: <AppWindow size={16} /> },
+            { path: ROUTES.OPS_AUDIT_SETTINGS, label: 'Audit Settings', icon: <ScanSearch size={16} /> },
+            { path: ROUTES.OPS_CONNECTIONS, label: 'Connections', icon: <Plug size={16} /> },
         ],
     },
     {

@@ -26,6 +26,8 @@ import { DataflowPage } from '@/components/DataflowPage';
 import { FabricPage } from '@/components/FabricPage';
 import { AutomateFlowPage } from '@/components/AutomateFlowPage';
 import { CanvasAppPage } from '@/components/CanvasAppPage';
+import { AuditSettingsPage } from '@/components/AuditSettingsPage';
+import { ConnectionsPage } from '@/components/ConnectionsPage';
 import { EnvironmentPage } from '@/components/EnvironmentPage';
 
 import { ROUTE_META, ROUTE_TO_MGMT_SUBVIEW, ROUTES } from '@/routes';
@@ -298,6 +300,8 @@ function App() {
                             <Route path={ROUTES.OPS_DATAFLOW} element={<DataflowPage />} />
                             <Route path={ROUTES.OPS_AUTOMATE} element={<AutomateFlowPage />} />
                             <Route path={ROUTES.OPS_CANVAS_APP} element={<CanvasAppPage />} />
+                            <Route path={ROUTES.OPS_AUDIT_SETTINGS} element={<AuditSettingsPage />} />
+                            <Route path={ROUTES.OPS_CONNECTIONS} element={<ConnectionsPage />} />
 
                             {/* Dev Tools */}
                             <Route path={ROUTES.MGMT_DEVTOOLS} element={<DevToolsPage />} />

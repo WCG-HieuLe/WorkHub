@@ -14,6 +14,8 @@ export const ROUTES = {
     OPS_DATAFLOW: '/operations/dataflow',
     OPS_AUTOMATE: '/operations/automate',
     OPS_CANVAS_APP: '/operations/canvas-app',
+    OPS_AUDIT_SETTINGS: '/operations/audit-settings',
+    OPS_CONNECTIONS: '/operations/connections',
 
     // ── Dev Tools ──
     MGMT_DEVTOOLS: '/devtools',
@@ -56,6 +58,8 @@ export const ROUTE_META: Record<string, { title: string; showDateNav: boolean }>
     [ROUTES.OPS_DATAFLOW]: { title: 'Dataflow', showDateNav: false },
     [ROUTES.OPS_AUTOMATE]: { title: 'Automate Flow', showDateNav: false },
     [ROUTES.OPS_CANVAS_APP]: { title: 'Canvas App', showDateNav: false },
+    [ROUTES.OPS_AUDIT_SETTINGS]: { title: 'Audit Settings', showDateNav: false },
+    [ROUTES.OPS_CONNECTIONS]: { title: 'Connections', showDateNav: false },
 
     // Dev Tools
     [ROUTES.MGMT_DEVTOOLS]: { title: 'Dev Tools', showDateNav: false },

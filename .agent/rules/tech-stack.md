@@ -21,6 +21,13 @@ PROJECT TECH STACK & CODEBASE RULES
    - Font family: Inter.
    - Base font size: 12px.
    - Heading size: 20px.
+   - Data Table (`.billing-table`, `.list-view-table`):
+     - Font size: 0.8rem (th + td).
+     - Padding th: 1rem.
+     - Padding td: 0.85rem 1rem.
+   - Filter Chips (`.filter-chip`): Toggle 1-click, dùng cho filter bar trên data table.
+     - Variants: `--success` (green), `--danger` (red), `--warn` (amber).
+     - Active state: `filter-chip--active` + variant class.
    - Override: Các giá trị này là mặc định, chỉ thay đổi khi có yêu cầu cụ thể từ thiết kế mới.
 
 4. Cấu trúc Codebase (Project Structure)

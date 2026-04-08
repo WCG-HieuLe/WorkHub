@@ -14,8 +14,7 @@ import {
     AppWindow,
     ScanSearch,
     Plug,
-    // Dev Tools
-    Code,
+
     // Settings
     Settings,
     Activity,
@@ -78,14 +77,7 @@ const navGroups: NavGroup[] = [
             { path: ROUTES.OPS_CONNECTIONS, label: 'Connections', icon: <Plug size={16} /> },
         ],
     },
-    {
-        id: 'devtools',
-        label: 'Dev Tools',
-        icon: <Code size={16} />,
-        items: [
-            { path: ROUTES.MGMT_DEVTOOLS, label: 'Tools & Links', icon: <Code size={16} /> },
-        ],
-    },
+
     {
         id: 'settings',
         label: 'Settings',
@@ -168,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
         operations: true,
-        devtools: false,
+
         settings: false,
         finance: false,
         security: false,

@@ -17,8 +17,7 @@ export const ROUTES = {
     OPS_AUDIT_SETTINGS: '/operations/audit-settings',
     OPS_CONNECTIONS: '/operations/connections',
 
-    // ── Dev Tools ──
-    MGMT_DEVTOOLS: '/devtools',
+
 
     // ── Settings (was System) ──
     MGMT_ADMIN: '/settings/admin',
@@ -61,8 +60,7 @@ export const ROUTE_META: Record<string, { title: string; showDateNav: boolean }>
     [ROUTES.OPS_AUDIT_SETTINGS]: { title: 'Audit Settings', showDateNav: false },
     [ROUTES.OPS_CONNECTIONS]: { title: 'Connections', showDateNav: false },
 
-    // Dev Tools
-    [ROUTES.MGMT_DEVTOOLS]: { title: 'Dev Tools', showDateNav: false },
+
 
     // Settings
     [ROUTES.MGMT_ADMIN]: { title: 'Admin', showDateNav: false },
@@ -90,7 +88,7 @@ export const ROUTE_META: Record<string, { title: string; showDateNav: boolean }>
 };
 
 /** Management sub-view type (used by ManagementView) */
-export type ManagementSubView = 'admin' | 'billing' | 'log' | 'data' | 'reports' | 'devtools' | 'domains' | 'license' | 'security' | 'compliance';
+export type ManagementSubView = 'admin' | 'billing' | 'log' | 'data' | 'reports' | 'domains' | 'license' | 'security' | 'compliance';
 
 /** Map route path → management sub-view */
 export const ROUTE_TO_MGMT_SUBVIEW: Partial<Record<string, ManagementSubView>> = {
@@ -99,7 +97,7 @@ export const ROUTE_TO_MGMT_SUBVIEW: Partial<Record<string, ManagementSubView>> =
     [ROUTES.MGMT_LOG]: 'log',
     [ROUTES.MGMT_DATA]: 'data',
     [ROUTES.MGMT_REPORTS]: 'reports',
-    [ROUTES.MGMT_DEVTOOLS]: 'devtools',
+
     [ROUTES.MGMT_DOMAINS]: 'domains',
     [ROUTES.MGMT_LICENSE]: 'license',
     [ROUTES.MGMT_SECURITY]: 'security',

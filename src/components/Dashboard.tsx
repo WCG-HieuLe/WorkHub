@@ -2,14 +2,14 @@ import React from 'react';
 import {
     Calendar, Clock, ExternalLink, Layout, Shield,
     Zap, Cloud, Users, KeyRound, FolderOpen, Building2,
+    Github, Pencil, LayoutDashboard, Figma, DoorOpen,
 } from 'lucide-react';
 
 interface StatCard {
     label: string;
     value: string;
     icon: React.ReactNode;
-    color: string;
-    bgColor: string;
+    theme: string;
 }
 
 interface QuickLink {
@@ -17,8 +17,12 @@ interface QuickLink {
     title: string;
     subtitle: string;
     url: string;
-    iconColor: string;
-    iconBg: string;
+    theme: string;
+}
+
+interface LinkGroup {
+    label: string;
+    links: QuickLink[];
 }
 
 interface DashboardProps {
@@ -26,19 +30,34 @@ interface DashboardProps {
 }
 
 const stats: StatCard[] = [
-    { label: 'Admin Systems', value: '19', icon: <Layout size={20} />, color: 'var(--accent-primary)', bgColor: 'rgba(167, 139, 250, 0.1)' },
-    { label: 'Active Tools', value: '6', icon: <Shield size={20} />, color: 'var(--success)', bgColor: 'rgba(16, 185, 129, 0.1)' },
-    { label: 'Pending Requests', value: '—', icon: <Clock size={20} />, color: 'var(--warning)', bgColor: 'rgba(245, 158, 11, 0.1)' },
-    { label: 'This Month', value: '—', icon: <Calendar size={20} />, color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.1)' },
+    { label: 'Admin Systems', value: '19', icon: <Layout size={20} />, theme: 'purple' },
+    { label: 'Active Tools', value: '6', icon: <Shield size={20} />, theme: 'green' },
+    { label: 'Pending Requests', value: '—', icon: <Clock size={20} />, theme: 'amber' },
+    { label: 'This Month', value: '—', icon: <Calendar size={20} />, theme: 'blue' },
 ];
 
-const quickLinks: QuickLink[] = [
-    { icon: <Zap size={22} />, title: 'Power Platform', subtitle: 'Automation & Apps', url: 'https://admin.powerplatform.microsoft.com/home', iconColor: 'var(--accent-primary)', iconBg: 'rgba(167, 139, 250, 0.1)' },
-    { icon: <Cloud size={22} />, title: 'Azure Portal', subtitle: 'Cloud Infrastructure', url: 'https://portal.azure.com/#home', iconColor: '#60a5fa', iconBg: 'rgba(96, 165, 250, 0.1)' },
-    { icon: <Users size={22} />, title: 'Google Admin', subtitle: 'Workspace Control', url: 'https://admin.google.com/ac/home', iconColor: '#f87171', iconBg: 'rgba(248, 113, 113, 0.1)' },
-    { icon: <KeyRound size={22} />, title: 'MS Entra', subtitle: 'Identity & Access', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/EntraLanding.ReactView', iconColor: '#818cf8', iconBg: 'rgba(129, 140, 248, 0.1)' },
-    { icon: <FolderOpen size={22} />, title: 'SharePoint', subtitle: 'Content Management', url: 'https://wecarei-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/home', iconColor: '#2dd4bf', iconBg: 'rgba(45, 212, 191, 0.1)' },
-    { icon: <Building2 size={22} />, title: '365 Admin', subtitle: 'Service Operations', url: 'https://admin.cloud.microsoft/?#/homepage', iconColor: '#fb923c', iconBg: 'rgba(251, 146, 60, 0.1)' },
+const linkGroups: LinkGroup[] = [
+    {
+        label: 'Admin Portals',
+        links: [
+            { icon: <Zap size={18} />, title: 'Power Platform', subtitle: 'Automation & Apps', url: 'https://admin.powerplatform.microsoft.com/home', theme: 'purple' },
+            { icon: <Cloud size={18} />, title: 'Azure Portal', subtitle: 'Cloud Infrastructure', url: 'https://portal.azure.com/#home', theme: 'blue' },
+            { icon: <Users size={18} />, title: 'Google Admin', subtitle: 'Workspace Control', url: 'https://admin.google.com/ac/home', theme: 'red' },
+            { icon: <KeyRound size={18} />, title: 'MS Entra', subtitle: 'Identity & Access', url: 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/EntraLanding.ReactView', theme: 'indigo' },
+            { icon: <FolderOpen size={18} />, title: 'SharePoint', subtitle: 'Content Management', url: 'https://wecarei-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/home', theme: 'teal' },
+            { icon: <Building2 size={18} />, title: '365 Admin', subtitle: 'Service Operations', url: 'https://admin.cloud.microsoft/?#/homepage', theme: 'orange' },
+        ],
+    },
+    {
+        label: 'Dev Tools',
+        links: [
+            { icon: <Github size={18} />, title: 'GitHub', subtitle: 'Repositories & source code', url: 'https://github.com', theme: 'gray' },
+            { icon: <Pencil size={18} />, title: 'Stitch', subtitle: 'UI design & prototyping', url: 'https://stitch.withgoogle.com', theme: 'purple' },
+            { icon: <LayoutDashboard size={18} />, title: 'Project Tracker', subtitle: 'Tasks & project management', url: 'https://dev.azure.com', theme: 'blue' },
+            { icon: <Figma size={18} />, title: 'Figma', subtitle: 'Design & collaboration', url: 'https://figma.com', theme: 'red' },
+            { icon: <DoorOpen size={18} />, title: 'Room Booking', subtitle: 'Đặt phòng họp', url: 'https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&pagetype=webresource&webresourceName=crdfd_Bookingroom', theme: 'teal' },
+        ],
+    },
 ];
 
 export const Dashboard: React.FC<DashboardProps> = ({ userName = 'User' }) => {
@@ -58,7 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userName = 'User' }) => {
                     <div key={stat.label} className="stat-card">
                         <div className="stat-card-header">
                             <span className="stat-label">{stat.label}</span>
-                            <div className="stat-icon" style={{ color: stat.color, background: stat.bgColor }}>
+                            <div className={`stat-icon stat-icon--${stat.theme}`}>
                                 {stat.icon}
                             </div>
                         </div>
@@ -69,24 +88,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ userName = 'User' }) => {
 
             <div className="dashboard-section">
                 <h3>Quick Access</h3>
-                <div className="quick-links-grid">
-                    {quickLinks.map((link) => (
-                        <a
-                            key={link.title}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="quick-link-card"
-                        >
-                            <span className="quick-link-emoji" style={{ color: link.iconColor, background: link.iconBg }}>
-                                {link.icon}
-                            </span>
-                            <div className="quick-link-info">
-                                <span className="quick-link-title">{link.title}</span>
-                                <span className="quick-link-subtitle">{link.subtitle}</span>
+                <div className="qa-groups">
+                    {linkGroups.map((group) => (
+                        <div key={group.label} className="qa-group">
+                            <span className="qa-group-label">{group.label}</span>
+                            <div className="qa-grid">
+                                {group.links.map((link) => (
+                                    <a
+                                        key={link.title}
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="qa-card"
+                                    >
+                                        <span className={`qa-icon qa-icon--${link.theme}`}>
+                                            {link.icon}
+                                        </span>
+                                        <span className="qa-title">{link.title}</span>
+                                        <ExternalLink size={12} className="qa-arrow" />
+                                    </a>
+                                ))}
                             </div>
-                            <ExternalLink size={16} className="quick-link-arrow" />
-                        </a>
+                        </div>
                     ))}
                 </div>
             </div>

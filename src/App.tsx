@@ -19,7 +19,7 @@ import { SystemHealthPage } from '@/components/SystemHealthPage';
 import { LogsPage } from '@/components/LogsPage';
 import { SecurityPage } from '@/components/SecurityPage';
 import { DomainsPage } from '@/components/DomainsPage';
-import { DevToolsPage } from '@/components/DevToolsPage';
+
 import { DataPage } from '@/components/DataPage';
 import { BackupsPage } from '@/components/BackupsPage';
 import { DataflowPage } from '@/components/DataflowPage';
@@ -303,8 +303,7 @@ function App() {
                             <Route path={ROUTES.OPS_AUDIT_SETTINGS} element={<AuditSettingsPage />} />
                             <Route path={ROUTES.OPS_CONNECTIONS} element={<ConnectionsPage />} />
 
-                            {/* Dev Tools */}
-                            <Route path={ROUTES.MGMT_DEVTOOLS} element={<DevToolsPage />} />
+
 
                             {/* Settings */}
                             <Route path={ROUTES.MGMT_ADMIN} element={<ManagementPage />} />

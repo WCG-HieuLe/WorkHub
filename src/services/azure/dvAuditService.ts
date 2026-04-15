@@ -187,7 +187,7 @@ export async function fetchDvAuditLogs(
 
 // ── Cache config ──
 
-const TABLE_CACHE_KEY = 'dv_audit_tables';
+const TABLE_CACHE_KEY = 'dv_audit_tables_v2';
 const TABLE_CACHE_TTL = 60 * 60 * 1000; // 60 minutes
 
 interface TableCache {
@@ -232,11 +232,21 @@ export async function fetchAuditTables(token: string): Promise<TableOption[]> {
     const res = await dvFetch(url, token);
     const data = await res.json();
 
+    // Các prefix được coi là table của công ty (loại bỏ adx_, msdyn_, system tables...)
+    const COMPANY_PREFIXES = [
+        'cr', 'wcg_', 'new_', 'chuongdq_', 'khoadb_', 
+        'ttphat_', 'sa_', 'thuanndm_', 'zxc_', 'n3_'
+    ];
+
     const tables: TableOption[] = (data.value || [])
         .map((e: { LogicalName: string; DisplayName: { UserLocalizedLabel: { Label: string } | null } }) => ({
             displayName: e.DisplayName?.UserLocalizedLabel?.Label || e.LogicalName,
             logicalName: e.LogicalName,
         }))
+        .filter((t: TableOption) => {
+            const ln = t.logicalName.toLowerCase();
+            return COMPANY_PREFIXES.some(prefix => ln.startsWith(prefix));
+        })
         .sort((a: TableOption, b: TableOption) => a.displayName.localeCompare(b.displayName));
 
     setCachedTables(tables);

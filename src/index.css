@@ -3686,12 +3686,24 @@ header.header-container {
   border-radius: 12px;
 }
 
-.management-card-content h3 {
-  font-size: 0.8rem;
-  margin-bottom: 0.1rem;
+.management-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
 }
 
+.management-card-content {
+  min-width: 0;
+}
 
+.management-card-content h3 {
+  font-size: 0.85rem;
+  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .management-card-arrow {
   top: 0.75rem;
@@ -4970,8 +4982,8 @@ header.header-container {
 
 .qa-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.8rem;
 }
 
 .qa-card {
@@ -5459,8 +5471,8 @@ header.header-container {
 
 .billing-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
 .billing-stat-card {
@@ -5468,7 +5480,7 @@ header.header-container {
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: 0.625rem 0.875rem;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;

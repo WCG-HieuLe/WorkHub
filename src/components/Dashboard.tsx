@@ -53,7 +53,7 @@ const linkGroups: LinkGroup[] = [
         links: [
             { icon: <Github size={18} />, title: 'GitHub', subtitle: 'Repositories & source code', url: 'https://github.com', theme: 'gray' },
             { icon: <Pencil size={18} />, title: 'Stitch', subtitle: 'UI design & prototyping', url: 'https://stitch.withgoogle.com', theme: 'purple' },
-            { icon: <LayoutDashboard size={18} />, title: 'Project Tracker', subtitle: 'Tasks & project management', url: 'https://dev.azure.com', theme: 'blue' },
+            { icon: <LayoutDashboard size={18} />, title: 'Project Tracker', subtitle: 'Tasks & project management', url: 'https://wcg-hieule.github.io/Project-Tracker/', theme: 'blue' },
             { icon: <Figma size={18} />, title: 'Figma', subtitle: 'Design & collaboration', url: 'https://figma.com', theme: 'red' },
             { icon: <DoorOpen size={18} />, title: 'Room Booking', subtitle: 'Đặt phòng họp', url: 'https://wecare-ii.crm5.dynamics.com/main.aspx?appid=7c0ada0d-cf0d-f011-998a-6045bd1cb61e&pagetype=webresource&webresourceName=crdfd_Bookingroom', theme: 'teal' },
         ],

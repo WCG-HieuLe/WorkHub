@@ -20,7 +20,7 @@ const TOOL_LINKS = [
         icon: <LayoutDashboard size={20} />,
         title: 'Project Tracker',
         description: 'Tasks & project management',
-        url: 'https://dev.azure.com',
+        url: 'https://wcg-hieule.github.io/Project-Tracker/',
         color: '#3b82f6',
     },
     {

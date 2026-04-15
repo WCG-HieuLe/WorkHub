@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useReducer, useRef } from 'rea
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     FileText, AlertTriangle, RefreshCw, Search, Clock, Copy, Check,
-    ChevronLeft, ChevronRight, Filter, X, ChevronDown,
+    ChevronLeft, ChevronRight, Filter, X, ChevronDown, Calendar
 } from 'lucide-react';
 import { acquireToken } from '@/services/azure/tokenService';
 import { dataverseConfig } from '@/config/authConfig';
@@ -69,6 +69,86 @@ const reducer = (state: AppState, action: Action): AppState => {
 };
 
 // ── Component ──
+
+const DateFilterInput: React.FC<{ label: string; value: string; onChange: (val: string) => void }> = ({ label, value, onChange }) => {
+    const [inputValue, setInputValue] = useState('');
+
+    useEffect(() => {
+        if (value) {
+            const parts = value.split('-');
+            if (parts.length === 3) {
+                const [y, m, d] = parts;
+                setInputValue(`${d}/${m}/${y}`);
+            } else {
+                setInputValue(value);
+            }
+        } else {
+            setInputValue('');
+        }
+    }, [value]);
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value.replace(/[^0-9/]/g, '');
+        
+        if (val.length > inputValue.length) {
+            if (val.length === 2 && !val.includes('/')) val += '/';
+            else if (val.length === 5 && val.split('/').length === 2) val += '/';
+        }
+        
+        setInputValue(val);
+        
+        if (val.length === 10) {
+            const parts = val.split('/');
+            if (parts.length === 3) {
+                const [d, m, y] = parts;
+                if (d.length === 2 && m.length === 2 && y.length === 4) {
+                    onChange(`${y}-${m}-${d}`);
+                }
+            }
+        } else if (val.length === 0) {
+            onChange('');
+        }
+    };
+
+    return (
+        <div>
+            <label className="audit-filter-label">{label}</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={handleTextChange}
+                    placeholder="DD/MM/YYYY"
+                    maxLength={10}
+                    className="audit-filter-input"
+                    style={{ flex: 1, paddingRight: '2rem' }}
+                />
+                <div style={{ position: 'absolute', right: 0, top: 0, width: '2rem', height: '100%', overflow: 'hidden' }}>
+                    <input
+                        type="date"
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        style={{
+                            position: 'absolute',
+                            right: '-1rem',
+                            top: 0,
+                            opacity: 0,
+                            width: '4rem',
+                            height: '100%',
+                            cursor: 'pointer',
+                            zIndex: 2,
+                            padding: 0,
+                            border: 'none',
+                        }}
+                    />
+                </div>
+                <div style={{ position: 'absolute', right: '0.45rem', pointerEvents: 'none', color: 'inherit', opacity: 0.5, zIndex: 1, display: 'flex' }}>
+                    <Calendar size={14} />
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const LogsPage: React.FC = () => {
     const { instance, accounts } = useMsal();
@@ -326,26 +406,18 @@ export const LogsPage: React.FC = () => {
                     </div>
 
                     {/* Start Date */}
-                    <div>
-                        <label className="audit-filter-label">Start Date</label>
-                        <input
-                            type="date"
-                            value={filters.startDate}
-                            onChange={e => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                            className="audit-filter-input"
-                        />
-                    </div>
+                    <DateFilterInput
+                        label="Start Date"
+                        value={filters.startDate}
+                        onChange={val => setFilters(prev => ({ ...prev, startDate: val }))}
+                    />
 
                     {/* End Date */}
-                    <div>
-                        <label className="audit-filter-label">End Date</label>
-                        <input
-                            type="date"
-                            value={filters.endDate}
-                            onChange={e => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="audit-filter-input"
-                        />
-                    </div>
+                    <DateFilterInput
+                        label="End Date"
+                        value={filters.endDate}
+                        onChange={val => setFilters(prev => ({ ...prev, endDate: val }))}
+                    />
 
                     {/* Record ID */}
                     <div>

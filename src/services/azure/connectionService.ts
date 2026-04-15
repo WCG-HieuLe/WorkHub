@@ -113,3 +113,25 @@ export async function fetchConnections(accessToken: string): Promise<ConnectionI
         } as ConnectionInfo;
     });
 }
+
+// ── Delete Connection ──
+
+export async function deleteConnection(accessToken: string, connectorName: string, connectionId: string): Promise<void> {
+    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${PP_ENV_ID}/apis/${connectorName}/connections/${connectionId}?api-version=2016-11-01`;
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+        },
+    });
+
+    if (!response.ok && response.status !== 204) {
+        const errorText = await response.text();
+        console.error('[ConnectionService] Delete failed:', response.status, errorText);
+        throw new Error(`Delete connection failed: ${response.status} — ${errorText}`);
+    }
+
+    console.log('[ConnectionService] Deleted connection:', connectionId);
+}

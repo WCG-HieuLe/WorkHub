@@ -1,51 +1,38 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Factory, Database, Layers, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, ChevronDown, ChevronRight, BarChart3, GitBranch,
 } from 'lucide-react';
-import type { FabricItem, FabricWorkspace } from '@/services/azure/dataService';
+import type { FabricItem } from '@/services/azure/dataService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchFabricWorkspaces, fetchFabricItems } from '@/services/azure/dataService';
 import { powerBIConfig } from '@/config/authConfig';
-import { getCache, setCache, clearCache } from '@/services/cache';
-
-const CACHE_KEY = 'fabric_items';
+import { useApiData } from '@/hooks/useApiData';
 
 export const FabricPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const cached = getCache<{ workspaces: FabricWorkspace[]; items: FabricItem[] }>(CACHE_KEY);
-    const [workspaces, setWorkspaces] = useState<FabricWorkspace[]>(cached?.workspaces || []);
-    const [items, setItems] = useState<FabricItem[]>(cached?.items || []);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    const { data: apiData, loading, error, refresh: loadData } = useApiData({
+        key: `fabric_items_${accounts[0]?.homeAccountId || 'default'}`,
+        fetcher: async () => {
+            const pbiToken = await acquireToken(instance, accounts[0], powerBIConfig.scopes);
+            const ws = await fetchFabricWorkspaces(pbiToken);
+            const fabricItems = await fetchFabricItems(pbiToken, ws);
+            return { workspaces: ws, items: fabricItems };
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: { workspaces: [], items: [] }
+    });
+
+    const workspaces = apiData?.workspaces || [];
+    const items = apiData?.items || [];
+    const loaded = workspaces.length > 0 || items.length > 0;
+
     const [search, setSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [selectedItem, setSelectedItem] = useState<FabricItem | null>(null);
-    const loaded = cached !== null;
-
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && loaded) return;
-        if (force) clearCache(CACHE_KEY);
-        setLoading(true);
-        setError(null);
-        try {
-            const pbiToken = await acquireToken(instance, accounts[0], powerBIConfig.scopes);
-            const ws = await fetchFabricWorkspaces(pbiToken);
-            setWorkspaces(ws);
-            const fabricItems = await fetchFabricItems(pbiToken, ws);
-            setItems(fabricItems);
-            setCache(CACHE_KEY, { workspaces: ws, items: fabricItems });
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load Fabric data');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated, loaded]);
-
-    useEffect(() => { loadData(); }, [loadData]);
 
     const wsGroups = useMemo(() => {
         const filtered = search
@@ -116,7 +103,7 @@ export const FabricPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -128,7 +115,7 @@ export const FabricPage: React.FC = () => {
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter items..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
                     </div>
-                    <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                    <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
                 </div>

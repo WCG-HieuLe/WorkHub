@@ -118,7 +118,7 @@ export async function fetchTableAuditDetail(
         const logicalName = (attr.LogicalName as string) || '';
         const displayName = extractLabel(attr.DisplayName as Record<string, unknown>);
 
-        if (isAttrAudited) {
+        if (isAttrAudited && isCustom) {
             auditedColumns.push({ logicalName, displayName });
         } else if (isCustom && attrType === 'Lookup' && isAuditEnabled) {
             unauditedLookups.push({ logicalName, displayName });

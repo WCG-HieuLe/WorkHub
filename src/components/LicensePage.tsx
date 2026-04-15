@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Key, Server, Users, CheckCircle, AlertTriangle,
@@ -6,9 +6,9 @@ import {
 } from 'lucide-react';
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchLicenseSummary, fetchLicenseDetail, LicenseSummary, LicenseDetail, LicenseSku } from '@/services/azure/licenseService';
-import { getCachedLicenseData, setCachedLicenseData, clearLicenseCache } from '@/services/azure/licenseCache';
 import { graphConfig } from '@/config/authConfig';
 import { usePagination } from '@/hooks/usePagination';
+import { useApiData } from '@/hooks/useApiData';
 
 type Tab = 'subscriptions' | 'portals';
 const PAGE_SIZE = 20;
@@ -28,40 +28,22 @@ const statusColors: Record<string, { color: string; bg: string; label: string }>
 export const LicensePage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [data, setData] = useState<LicenseSummary | null>(() => getCachedLicenseData());
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [tab, setTab] = useState<Tab>('subscriptions');
+    
+    const { data: data, loading, error, refresh: loadData } = useApiData<LicenseSummary | null>({
+        key: `license_summary_${accounts[0]?.homeAccountId || 'default'}`,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], graphConfig.scopes);
+            return await fetchLicenseSummary(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0 && tab === 'subscriptions',
+        initialData: null
+    });
+
     const [search, setSearch] = useState('');
-    const loadedRef = useRef(!!getCachedLicenseData());
     const [selectedSku, setSelectedSku] = useState<LicenseSku | null>(null);
     const [detail, setDetail] = useState<LicenseDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
-
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (loadedRef.current && !force) return;
-        if (force) clearLicenseCache();
-        setLoading(true);
-        setError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], graphConfig.scopes);
-            const licenseData = await fetchLicenseSummary(token);
-            setData(licenseData);
-            setCachedLicenseData(licenseData);
-            loadedRef.current = true;
-        } catch (e) {
-            console.error('License data error:', e);
-            setError(e instanceof Error ? e.message : 'Không thể tải dữ liệu license.');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
-
-    // Lazy loading: only fetch when subscriptions tab is active
-    useEffect(() => {
-        if (tab === 'subscriptions') loadData();
-    }, [tab, loadData]);
 
     const filteredSkus = data?.skus.filter(sku => {
         if (!search.trim()) return true;
@@ -70,7 +52,7 @@ export const LicensePage: React.FC = () => {
     }) || [];
 
     const pagination = usePagination(filteredSkus, PAGE_SIZE);
-    const skuCount = loadedRef.current ? (data?.skus.length || 0) : '—';
+    const skuCount = data ? data.skus.length : '—';
 
     const openDetail = async (sku: LicenseSku) => {
         setSelectedSku(sku);
@@ -131,7 +113,7 @@ export const LicensePage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu license</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -160,7 +142,7 @@ export const LicensePage: React.FC = () => {
                         </div>
                     )}
                     {tab !== 'portals' && (
-                        <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                        <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                             <RefreshCw size={14} className={loading ? 'spin' : ''} />
                         </button>
                     )}

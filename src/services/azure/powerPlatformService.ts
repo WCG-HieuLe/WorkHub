@@ -206,6 +206,28 @@ export async function fetchFlowRunTriggerOutput(sasUrl: string): Promise<Record<
     }
 }
 
+// ── Delete Flow ──
+
+export async function deleteFlow(flowToken: string, flowId: string): Promise<void> {
+    const url = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/scopes/admin/environments/${PP_ENV_ID}/flows/${flowId}?api-version=2016-11-01`;
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${flowToken}`,
+            'Accept': 'application/json',
+        },
+    });
+
+    if (!response.ok && response.status !== 204) {
+        const errorText = await response.text();
+        console.error('[FlowService] Delete failed:', response.status, errorText);
+        throw new Error(`Delete flow failed: ${response.status} — ${errorText}`);
+    }
+
+    console.log('[FlowService] Deleted flow:', flowId);
+}
+
 export async function fetchEnvironments(envToken: string): Promise<PPEnvironment[]> {
     const url = 'https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2021-04-01';
 

@@ -3,18 +3,14 @@ import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Workflow, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, ChevronDown, ChevronRight,
-    Layers, Factory, Clock, Users, ExternalLink, History, Database, CalendarClock, Copy,
+    Layers, Factory, Clock, Users, ExternalLink, History, Database, CalendarClock, Copy, Trash2,
 } from 'lucide-react';
 import type { Dataflow, FabricItem, FabricWorkspace, FabricDataflowTransaction, FabricRefreshSchedule, DataflowRefreshRun } from '@/services/azure/dataService';
-import { fetchDataflows, fetchFabricWorkspaces, fetchFabricItems, fetchDataflowTransactions, fetchDataflowRefreshSchedule, fetchDataflowRefreshHistory } from '@/services/azure/dataService';
+import { fetchDataflows, fetchFabricWorkspaces, fetchFabricItems, fetchDataflowTransactions, fetchDataflowRefreshSchedule, fetchDataflowRefreshHistory, deleteDataflow, deleteFabricDataflow } from '@/services/azure/dataService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { dataverseConfig, powerBIConfig } from '@/config/authConfig';
-import { getCache, setCache, clearCache } from '@/services/cache';
-
-type TabKey = 'pa' | 'fabric';
-
-const PA_CACHE_KEY = 'pa_dataflows';
-const FABRIC_CACHE_KEY = 'fabric_dataflows';
+import { useApiData } from '@/hooks/useApiData';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 function formatDate(dateStr: string): string {
     if (!dateStr) return '—';
@@ -27,36 +23,13 @@ function formatDateTime(dateStr: string): string {
     return new Date(dateStr).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+type TabKey = 'pa' | 'fabric';
+
 export const DataflowPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
     const [activeTab, setActiveTab] = useState<TabKey>('pa');
-
-    // ── PA state (Dataverse msdyn_dataflows) ──
-    const paCached = getCache<{ dataflows: Dataflow[]; total: number }>(PA_CACHE_KEY);
-    const [paDataflows, setPaDataflows] = useState<Dataflow[]>(paCached?.dataflows || []);
-    const [paTotal, setPaTotal] = useState(paCached?.total || 0);
-    const [paLoading, setPaLoading] = useState(false);
-    const [paError, setPaError] = useState<string | null>(null);
-    const [paSearch, setPaSearch] = useState('');
-    const [paStatusFilter, setPaStatusFilter] = useState<string>('all');
-    const [paScheduleFilter, setPaScheduleFilter] = useState<string>('all');
-    const paLoaded = paCached !== null;
-
-    // ── Fabric state ──
-    const fabricCached = getCache<{ workspaces: FabricWorkspace[]; dataflows: FabricItem[] }>(FABRIC_CACHE_KEY);
-    const [fabricWorkspaces, setFabricWorkspaces] = useState<FabricWorkspace[]>(fabricCached?.workspaces || []);
-    const [fabricDataflows, setFabricDataflows] = useState<FabricItem[]>(fabricCached?.dataflows || []);
-    const [fabricLoading, setFabricLoading] = useState(false);
-    const [fabricError, setFabricError] = useState<string | null>(null);
-    const [fabricSearch, setFabricSearch] = useState('');
-    const fabricLoaded = fabricCached !== null;
-
-    // ── Shared UI state ──
-    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-    const [selectedPA, setSelectedPA] = useState<Dataflow | null>(null);
-    const [selectedFabric, setSelectedFabric] = useState<FabricItem | null>(null);
 
     // ── History popup state (center modal) ──
     const [historyName, setHistoryName] = useState('');
@@ -68,53 +41,59 @@ export const DataflowPage: React.FC = () => {
     // ── Fabric detail on-demand data ──
     const [fabricSchedule, setFabricSchedule] = useState<FabricRefreshSchedule | null>(null);
 
-    // ── Load PA dataflows (via Dataverse API) ──
-    const loadPA = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && paLoaded) return;
-        if (force) clearCache(PA_CACHE_KEY);
-        setPaLoading(true);
-        setPaError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
-            const result = await fetchDataflows(token);
-            setPaDataflows(result.dataflows);
-            setPaTotal(result.total);
-            setCache(PA_CACHE_KEY, result);
-        } catch (err) {
-            setPaError(err instanceof Error ? err.message : 'Failed to load PA dataflows');
-        } finally {
-            setPaLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated, paLoaded]);
+    // ── Delete state ──
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmTarget, setConfirmTarget] = useState<{ type: 'pa'; item: Dataflow } | { type: 'fabric'; item: FabricItem } | null>(null);
 
-    // ── Load Fabric dataflows ──
-    const loadFabric = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && fabricLoaded) return;
-        if (force) clearCache(FABRIC_CACHE_KEY);
-        setFabricLoading(true);
-        setFabricError(null);
-        try {
+
+    // ── PA state (Dataverse msdyn_dataflows) ──
+    const PA_CACHE_KEY = `pa_dataflows_${accounts[0]?.homeAccountId || 'default'}`;
+    const { data: paData, loading: paLoading, error: paError, refresh: loadPA, setData: setPaData } = useApiData({
+        key: PA_CACHE_KEY,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
+            return await fetchDataflows(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0 && activeTab === 'pa',
+        initialData: { dataflows: [] as Dataflow[], total: 0 }
+    });
+    
+    const paDataflows = paData?.dataflows || [];
+    const paTotal = paData?.total || 0;
+    const paLoaded = paDataflows.length > 0 || !paLoading;
+    
+    const [paSearch, setPaSearch] = useState('');
+    const [paStatusFilter, setPaStatusFilter] = useState<string>('all');
+    const [paScheduleFilter, setPaScheduleFilter] = useState<string>('all');
+
+    // ── Fabric state ──
+    const FABRIC_CACHE_KEY = `fabric_dataflows_${accounts[0]?.homeAccountId || 'default'}`;
+    const { data: fabricData, loading: fabricLoading, error: fabricError, refresh: loadFabric, setData: setFabricData } = useApiData({
+        key: FABRIC_CACHE_KEY,
+        fetcher: async () => {
             const pbiToken = await acquireToken(instance, accounts[0], powerBIConfig.scopes);
             const ws = await fetchFabricWorkspaces(pbiToken);
-            setFabricWorkspaces(ws);
             const allItems = await fetchFabricItems(pbiToken, ws);
             const dataflowsOnly = allItems.filter(item => item.type === 'Dataflow');
-            setFabricDataflows(dataflowsOnly);
-            setCache(FABRIC_CACHE_KEY, { workspaces: ws, dataflows: dataflowsOnly });
-        } catch (err) {
-            setFabricError(err instanceof Error ? err.message : 'Failed to load Fabric dataflows');
-        } finally {
-            setFabricLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated, fabricLoaded]);
+            return { workspaces: ws, dataflows: dataflowsOnly };
+        },
+        enabled: isAuthenticated && accounts.length > 0 && activeTab === 'fabric',
+        initialData: { workspaces: [] as FabricWorkspace[], dataflows: [] as FabricItem[] }
+    });
+    
+    const fabricWorkspaces = fabricData?.workspaces || [];
+    const fabricDataflows = fabricData?.dataflows || [];
+    const fabricLoaded = fabricDataflows.length > 0 || !fabricLoading;
+    
+    const [fabricSearch, setFabricSearch] = useState('');
 
-    // Auto-load active tab
-    useEffect(() => {
-        if (activeTab === 'pa') loadPA();
-        else loadFabric();
-    }, [activeTab, loadPA, loadFabric]);
+    // ── Shared UI state ──
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [selectedPA, setSelectedPA] = useState<Dataflow | null>(null);
+    const [selectedFabric, setSelectedFabric] = useState<FabricItem | null>(null);
+
+    // ── Data Loading ──
+    // Đã chuyển sang sử dụng hook `useApiData` (Quy chuẩn Wecare Pattern A)
 
     // ── Open PA History popup (lazy load from Dataverse msdyn_refreshhistory) ──
     const openPAHistory = useCallback(async (df: Dataflow) => {
@@ -171,6 +150,42 @@ export const DataflowPage: React.FC = () => {
     const toggleGroup = (key: string) => {
         setExpandedGroups(prev => prev[key] ? {} : { [key]: true });
     };
+
+    // ── Delete handlers ──
+    const handleDeleteClick = useCallback((type: 'pa' | 'fabric', item: Dataflow | FabricItem, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setConfirmTarget(type === 'pa' ? { type: 'pa', item: item as Dataflow } : { type: 'fabric', item: item as FabricItem });
+    }, []);
+
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!confirmTarget) return;
+        try {
+            setDeletingId(confirmTarget.item.id);
+            if (confirmTarget.type === 'pa') {
+                const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
+                await deleteDataflow(token, confirmTarget.item.id);
+                setPaData(prev => ({
+                    dataflows: prev.dataflows.filter(d => d.id !== confirmTarget.item.id),
+                    total: prev.total - 1
+                }));
+                if (selectedPA?.id === confirmTarget.item.id) setSelectedPA(null);
+            } else {
+                const fabricItem = confirmTarget.item as FabricItem;
+                const token = await acquireToken(instance, accounts[0], powerBIConfig.scopes);
+                await deleteFabricDataflow(token, fabricItem.workspaceId, fabricItem.id);
+                setFabricData(prev => ({
+                    workspaces: prev.workspaces,
+                    dataflows: prev.dataflows.filter(d => d.id !== confirmTarget.item.id)
+                }));
+                if (selectedFabric?.id === confirmTarget.item.id) setSelectedFabric(null);
+            }
+            setConfirmTarget(null);
+        } catch (err) {
+            alert(`Xóa thất bại: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setDeletingId(null);
+        }
+    }, [confirmTarget, instance, accounts, selectedPA, selectedFabric]);
 
 
 
@@ -295,7 +310,7 @@ export const DataflowPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => reload(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => reload()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -327,7 +342,7 @@ export const DataflowPage: React.FC = () => {
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter dataflows..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
                     </div>
-                    <button onClick={() => reload(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                    <button onClick={() => reload()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
                     {isPA && paGroups.length > 0 && (
@@ -371,7 +386,7 @@ export const DataflowPage: React.FC = () => {
                                 {expandedGroups[owner] && (
                                     <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
                                         <table className="billing-table">
-                                            <thead><tr><th>Name</th><th>Entities</th><th>Last Status</th><th>Last Refresh</th><th>Schedule</th><th>Modified By</th><th>Modified On</th><th style={{ width: 36 }}></th></tr></thead>
+                                            <thead><tr><th>Name</th><th>Entities</th><th>Last Status</th><th>Last Refresh</th><th>Schedule</th><th>Modified By</th><th>Modified On</th><th style={{ width: 70 }}></th></tr></thead>
                                             <tbody>
                                                 {items.map(df => (
                                                     <tr key={df.id} className="clickable-row" onClick={() => setSelectedPA(df)}>
@@ -413,7 +428,7 @@ export const DataflowPage: React.FC = () => {
                                                         </td>
                                                         <td className="billing-table-type">{df.modifiedBy || '—'}</td>
                                                         <td className="billing-table-type">{formatDate(df.lastModified)}</td>
-                                                        <td>
+                                                        <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                                             <button
                                                                 className="billing-refresh-btn"
                                                                 style={{ padding: '4px', lineHeight: 0 }}
@@ -421,6 +436,21 @@ export const DataflowPage: React.FC = () => {
                                                                 onClick={(e) => { e.stopPropagation(); openPAHistory(df); }}
                                                             >
                                                                 <History size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleDeleteClick('pa', df, e)}
+                                                                disabled={deletingId === df.id}
+                                                                title="Xóa dataflow"
+                                                                style={{
+                                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                                    color: 'var(--text-secondary)', padding: 4, borderRadius: 4,
+                                                                    opacity: deletingId === df.id ? 0.3 : 0.5,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                                            >
+                                                                {deletingId === df.id ? <RefreshCw size={13} className="spin" /> : <Trash2 size={13} />}
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -455,14 +485,14 @@ export const DataflowPage: React.FC = () => {
                                 {expandedGroups[wsName] && (
                                     <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
                                         <table className="billing-table">
-                                            <thead><tr><th>Name</th><th>Configured By</th><th>Refreshable</th><th style={{ width: 36 }}></th></tr></thead>
+                                            <thead><tr><th>Name</th><th>Configured By</th><th>Refreshable</th><th style={{ width: 70 }}></th></tr></thead>
                                             <tbody>
                                                 {items.map(df => (
                                                     <tr key={df.id} className="clickable-row" onClick={() => openFabricDetail(df)}>
                                                         <td className="billing-table-name">{df.name}</td>
                                                         <td className="billing-table-type">{df.configuredBy || '—'}</td>
                                                         <td>{df.isRefreshable ? <CheckCircle size={14} style={{ color: '#10b981' }} /> : <XCircle size={14} style={{ color: '#71717a' }} />}</td>
-                                                        <td>
+                                                        <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                                             <button
                                                                 className="billing-refresh-btn"
                                                                 style={{ padding: '4px', lineHeight: 0 }}
@@ -470,6 +500,21 @@ export const DataflowPage: React.FC = () => {
                                                                 onClick={(e) => { e.stopPropagation(); openFabricHistory(df); }}
                                                             >
                                                                 <History size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleDeleteClick('fabric', df, e)}
+                                                                disabled={deletingId === df.id}
+                                                                title="Xóa dataflow"
+                                                                style={{
+                                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                                    color: 'var(--text-secondary)', padding: 4, borderRadius: 4,
+                                                                    opacity: deletingId === df.id ? 0.3 : 0.5,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                                            >
+                                                                {deletingId === df.id ? <RefreshCw size={13} className="spin" /> : <Trash2 size={13} />}
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -813,6 +858,17 @@ export const DataflowPage: React.FC = () => {
                     </div>
                 </>
             )}
+
+            {/* Confirm delete dialog */}
+            <ConfirmDialog
+                open={!!confirmTarget}
+                title={`Xóa dataflow "${confirmTarget?.item.name || ''}"?`}
+                confirmLabel="Xóa"
+                variant="danger"
+                loading={!!deletingId}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmTarget(null)}
+            />
         </div>
     );
 };

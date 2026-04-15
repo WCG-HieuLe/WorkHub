@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Server, RefreshCw, AlertTriangle, Search, X,
@@ -8,7 +8,7 @@ import type { PPEnvironment } from '@/services/azure/powerPlatformService';
 import { fetchEnvironments } from '@/services/azure/powerPlatformService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { powerPlatformAdminConfig } from '@/config/authConfig';
-import { getCache, setCache, clearCache } from '@/services/cache';
+import { useApiData } from '@/hooks/useApiData';
 
 const CACHE_KEY = 'pp_environments';
 
@@ -21,33 +21,22 @@ export const EnvironmentPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const cached = getCache<PPEnvironment[]>(CACHE_KEY);
-    const [envs, setEnvs] = useState<PPEnvironment[]>(cached || []);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const envCacheKey = `${CACHE_KEY}_${accounts[0]?.homeAccountId || 'default'}`;
+    
+    const { data: envs, loading, error, refresh: loadData } = useApiData({
+        key: envCacheKey,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], powerPlatformAdminConfig.scopes);
+            return await fetchEnvironments(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: [] as PPEnvironment[]
+    });
+
+    const loaded = envs.length > 0 || !loading;
+
     const [search, setSearch] = useState('');
     const [selectedEnv, setSelectedEnv] = useState<PPEnvironment | null>(null);
-    const loaded = cached !== null;
-
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && loaded) return;
-        if (force) clearCache(CACHE_KEY);
-        setLoading(true);
-        setError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], powerPlatformAdminConfig.scopes);
-            const result = await fetchEnvironments(token);
-            setEnvs(result);
-            setCache(CACHE_KEY, result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load environments');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated, loaded]);
-
-    useEffect(() => { loadData(); }, [loadData]);
 
     const filtered = useMemo(() => {
         if (!search) return envs;
@@ -80,7 +69,7 @@ export const EnvironmentPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -91,7 +80,7 @@ export const EnvironmentPage: React.FC = () => {
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter environments..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
                     </div>
-                    <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                    <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
                 </div>

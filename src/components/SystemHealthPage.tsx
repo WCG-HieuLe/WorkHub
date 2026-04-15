@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Activity, Cloud, Shield, Zap, Globe,
@@ -7,6 +7,7 @@ import {
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchHealthData, HealthData, mapStatus } from '@/services/azure/healthService';
 import { graphConfig } from '@/config/authConfig';
+import { useApiData } from '@/hooks/useApiData';
 
 const statusLabels: Record<string, { label: string; color: string }> = {
     healthy: { label: 'Operational', color: '#10b981' },
@@ -32,29 +33,16 @@ const portalLinks = [
 export const SystemHealthPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [data, setData] = useState<HealthData | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const loadData = useCallback(async () => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        setLoading(true);
-        setError(null);
-        try {
+    
+    const { data: data, loading, error, refresh: loadData } = useApiData<HealthData | null>({
+        key: `system_health_${accounts[0]?.homeAccountId || 'default'}`,
+        fetcher: async () => {
             const token = await acquireToken(instance, accounts[0], graphConfig.scopes);
-            const healthData = await fetchHealthData(token);
-            setData(healthData);
-        } catch (e) {
-            console.error('Health data error:', e);
-            setError(e instanceof Error ? e.message : 'Không thể tải dữ liệu health.');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
-
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+            return await fetchHealthData(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: null
+    });
 
     const healthyCount = data ? data.services.filter(s => mapStatus(s.status) === 'healthy').length : 0;
     const issueCount = data ? data.services.length - healthyCount : 0;
@@ -109,7 +97,7 @@ export const SystemHealthPage: React.FC = () => {
                         <strong>Cannot load service health</strong>
                         <p>{error}</p>
                     </div>
-                    <button onClick={loadData} className="billing-retry-btn">
+                    <button onClick={() => loadData()} className="billing-retry-btn">
                         <RefreshCw size={14} /> Thử lại
                     </button>
                 </div>
@@ -120,7 +108,7 @@ export const SystemHealthPage: React.FC = () => {
                 <div className="billing-section">
                     <div className="billing-section-header">
                         <h3>Microsoft 365 Service Health</h3>
-                        <button onClick={loadData} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                        <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                             <RefreshCw size={14} className={loading ? 'spin' : ''} />
                         </button>
                     </div>

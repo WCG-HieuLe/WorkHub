@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Shield, AlertTriangle, Users, RefreshCw, ExternalLink,
@@ -7,6 +7,7 @@ import {
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchSecurityData, SecurityData } from '@/services/azure/securityService';
 import { graphConfig } from '@/config/authConfig';
+import { useApiData } from '@/hooks/useApiData';
 
 const severityColors: Record<string, { color: string; bg: string }> = {
     high: { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
@@ -27,29 +28,16 @@ const riskColors: Record<string, { color: string; bg: string }> = {
 export const SecurityPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [data, setData] = useState<SecurityData | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const loadData = useCallback(async () => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        setLoading(true);
-        setError(null);
-        try {
+    
+    const { data: data, loading, error, refresh: loadData } = useApiData<SecurityData | null>({
+        key: `security_data_${accounts[0]?.homeAccountId || 'default'}`,
+        fetcher: async () => {
             const token = await acquireToken(instance, accounts[0], graphConfig.scopes);
-            const secData = await fetchSecurityData(token);
-            setData(secData);
-        } catch (e) {
-            console.error('Security data error:', e);
-            setError(e instanceof Error ? e.message : 'Cannot load security data.');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
-
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+            return await fetchSecurityData(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: null
+    });
 
     const highRiskCount = data?.riskyUsers.filter(u => u.riskLevel === 'high').length || 0;
     const highAlerts = data?.alerts.filter(a => a.severity === 'high').length || 0;
@@ -101,7 +89,7 @@ export const SecurityPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Cannot load security data</strong><p>{error}</p></div>
-                    <button onClick={loadData} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -115,7 +103,7 @@ export const SecurityPage: React.FC = () => {
                 <div className="billing-section">
                     <div className="billing-section-header">
                         <h3>Risky Users ({data.riskyUsers.length})</h3>
-                        <button onClick={loadData} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                        <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                             <RefreshCw size={14} className={loading ? 'spin' : ''} />
                         </button>
                     </div>

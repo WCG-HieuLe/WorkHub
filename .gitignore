@@ -7,3 +7,8 @@ dist
 Attendance
 .DS_Store
 *.local
+
+data.json
+downloaded_data.json
+stitch_*.html
+stitch_*.txt

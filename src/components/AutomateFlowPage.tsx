@@ -2,15 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Zap, RefreshCw, AlertTriangle, Search, X,
-    CheckCircle, XCircle, User, Copy, Check,
+    CheckCircle, XCircle, Copy, Check,
     ChevronDown, ChevronRight, ExternalLink, Clock, History,
-    BarChart3, List, Loader2,
+    BarChart3, List, Loader2, Trash2, Shield
 } from 'lucide-react';
 import type { FlowDefinition, FlowRun } from '@/services/azure/powerPlatformService';
-import { fetchFlows, fetchFlowRuns, fetchFlowRunTriggerOutput } from '@/services/azure/powerPlatformService';
+import { fetchFlows, fetchFlowRuns, fetchFlowRunTriggerOutput, deleteFlow } from '@/services/azure/powerPlatformService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { dataverseConfig, powerAutomateConfig } from '@/config/authConfig';
-import { getCache, setCache, clearCache } from '@/services/cache';
+import { useApiData } from '@/hooks/useApiData';
 import { FlowOverview } from '@/components/flow/FlowOverview';
 import { FlowStructureViewer } from '@/components/flow/FlowStructureViewer';
 import {
@@ -20,6 +20,8 @@ import {
     formatDuration,
     type FlowStructure,
 } from '@/services/azure/flowAnalyticsService';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { HealthCheckResult } from '@/services/azure/flowAnalyticsService';
 
 const CACHE_KEY = 'automate_flows';
 type TabType = 'overview' | 'list';
@@ -64,16 +66,29 @@ export const AutomateFlowPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
-    const cached = getCache<{ flows: FlowDefinition[]; total: number }>(CACHE_KEY);
-    const [flows, setFlows] = useState<FlowDefinition[]>(cached?.flows || []);
-    const [total, setTotal] = useState(cached?.total || 0);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { data: apiData, loading, error, refresh: loadData, setData } = useApiData({
+        key: CACHE_KEY,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
+            return await fetchFlows(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: { flows: [] as FlowDefinition[], total: 0 }
+    });
+
+    const flows = apiData?.flows || [];
+    const total = apiData?.total || 0;
+    const loaded = flows.length > 0;
+
     const [search, setSearch] = useState('');
     const [selectedFlow, setSelectedFlow] = useState<FlowDefinition | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [activeTab, setActiveTab] = useState<TabType>('overview');
-    const loaded = cached !== null;
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmTarget, setConfirmTarget] = useState<FlowDefinition | null>(null);
+
+    // Flow overview health result state
+    const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
 
     // History popup state
     const [historyName, setHistoryName] = useState('');
@@ -92,26 +107,32 @@ export const AutomateFlowPage: React.FC = () => {
     const [structureLoading, setStructureLoading] = useState(false);
 
     // ─── Data Loading ───
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (!force && loaded) return;
-        if (force) clearCache(CACHE_KEY);
-        setLoading(true);
-        setError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
-            const result = await fetchFlows(token);
-            setFlows(result.flows);
-            setTotal(result.total);
-            setCache(CACHE_KEY, result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load flows');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated, loaded]);
+    // ─── Data Loading ───
+    // Đã chuyển sang sử dụng hook `useApiData` (Quy chuẩn Wecare Pattern A)
 
-    useEffect(() => { loadData(); }, [loadData]);
+    const handleDeleteClick = useCallback((flow: FlowDefinition, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setConfirmTarget(flow);
+    }, []);
+
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!confirmTarget) return;
+        try {
+            setDeletingId(confirmTarget.id);
+            const token = await acquireToken(instance, accounts[0], powerAutomateConfig.scopes);
+            await deleteFlow(token, confirmTarget.id);
+            setData(prev => ({
+                flows: prev.flows.filter(f => f.id !== confirmTarget.id),
+                total: prev.total - 1
+            }));
+            if (selectedFlow?.id === confirmTarget.id) setSelectedFlow(null);
+            setConfirmTarget(null);
+        } catch (err) {
+            alert(`Xóa thất bại: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setDeletingId(null);
+        }
+    }, [confirmTarget, instance, accounts, selectedFlow]);
 
     // ─── History ───
     const openHistory = useCallback(async (flow: FlowDefinition) => {
@@ -209,20 +230,22 @@ export const AutomateFlowPage: React.FC = () => {
         else setExpandedGroups({ [ownerGroups[0][0]]: true });
     }, [ownerGroups]);
 
-    const activeCount = flows.filter(f => f.state === 'Activated').length;
+    // const activeCount = flows.filter(f => f.state === 'Activated').length;
     const draftCount = flows.filter(f => f.state !== 'Activated').length;
-    const ownerCount = new Set(flows.map(f => f.owner).filter(Boolean)).size;
+    // const ownerCount = new Set(flows.map(f => f.owner).filter(Boolean)).size;
 
     /* ═══ RENDER ═══ */
     return (
         <div className="list-view-container" style={{ padding: '0.75rem 1.25rem' }}>
 
             {/* ── KPI Strip ── */}
-            <div className="flow-kpi-strip">
-                <KpiCard icon={<Zap size={18} />} label="Total Flows" value={loading && !loaded ? '...' : total.toString()} colorClass="accent" />
-                <KpiCard icon={<CheckCircle size={18} />} label="Active" value={loading && !loaded ? '...' : activeCount.toString()} colorClass="success" />
-                <KpiCard icon={<XCircle size={18} />} label="Draft" value={loading && !loaded ? '...' : draftCount.toString()} colorClass="warning" />
-                <KpiCard icon={<User size={18} />} label="Owners" value={loading && !loaded ? '...' : ownerCount.toString()} colorClass="accent" />
+            <div className="overflow-x-auto scrollbar-hide pb-2">
+                <div className="grid grid-cols-4 gap-3 mb-4 min-w-[900px] xl:min-w-full">
+                    <StatCard icon={<Zap size={16} />} label="Total Flows" value={loading && !loaded ? '...' : total.toString()} sub="Total in environment" colorVar="var(--accent-primary)" />
+                    <StatCard icon={<XCircle size={16} />} label="Draft" value={loading && !loaded ? '...' : draftCount.toString()} sub="Turned off" colorVar="var(--warning)" />
+                    <StatCard icon={<AlertTriangle size={16} />} label="Flows with Errors" value={healthResult ? healthResult.failedFlows.length.toString() : '—'} sub={healthResult ? `${healthResult.totalFailedRuns} total failed runs` : 'Require Health Check'} colorVar="var(--danger)" />
+                    <StatCard icon={<Shield size={16} />} label="Stuck Flows" value={healthResult ? healthResult.stuckFlows.length.toString() : '—'} sub={healthResult ? `Running > 50 runs` : 'Require Health Check'} colorVar="var(--warning)" />
+                </div>
             </div>
 
             {/* ── Error Banner ── */}
@@ -233,7 +256,7 @@ export const AutomateFlowPage: React.FC = () => {
                         <strong>Không thể tải dữ liệu</strong>
                         <p className="text-text-muted" style={{ marginTop: 2 }}>{error}</p>
                     </div>
-                    <button onClick={() => loadData(true)} className="action-icon-btn" style={{ gap: 4, display: 'flex', alignItems: 'center' }}>
+                    <button onClick={() => loadData()} className="action-icon-btn" style={{ gap: 4, display: 'flex', alignItems: 'center' }}>
                         <RefreshCw size={12} /> Thử lại
                     </button>
                 </div>
@@ -268,7 +291,7 @@ export const AutomateFlowPage: React.FC = () => {
                             )}
                         </div>
                     )}
-                    <button onClick={() => loadData(true)} disabled={loading} className="action-icon-btn" title="Refresh">
+                    <button onClick={() => loadData()} disabled={loading} className="action-icon-btn" title="Refresh">
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
@@ -285,7 +308,15 @@ export const AutomateFlowPage: React.FC = () => {
             {/* ── Tab Content ── */}
             {(loaded || flows.length > 0) && (
                 <>
-                    {activeTab === 'overview' && <FlowOverview flows={flows} />}
+                    {activeTab === 'overview' && (
+                        <FlowOverview 
+                            flows={flows} 
+                            onDeleteFlow={(id, name) => setConfirmTarget({ id, name } as FlowDefinition)}
+                            deletingId={deletingId}
+                            healthResult={healthResult}
+                            onHealthResultChange={setHealthResult}
+                        />
+                    )}
 
                     {activeTab === 'list' && (
                         <div className="list-view-table-wrapper">
@@ -306,7 +337,7 @@ export const AutomateFlowPage: React.FC = () => {
                                             {expandedGroups[owner] && (
                                                 <div className="billing-table-wrapper" style={{ marginLeft: 0 }}>
                                                     <table className="billing-table">
-                                                        <thead><tr><th>Name</th><th>Status</th><th>Created By</th><th>Created</th><th>Modified By</th><th>Modified</th><th style={{ width: 40 }}></th></tr></thead>
+                                                        <thead><tr><th>Name</th><th>Status</th><th>Created By</th><th>Created</th><th>Modified By</th><th>Modified</th><th style={{ width: 70 }}></th></tr></thead>
                                                         <tbody>
                                                             {items.map(flow => (
                                                                 <tr key={flow.id} className="clickable-row" onClick={() => handleSelectFlow(flow)}>
@@ -321,7 +352,7 @@ export const AutomateFlowPage: React.FC = () => {
                                                                     <td className="billing-table-type">{formatDate(flow.createdOn)}</td>
                                                                     <td className="billing-table-type">{flow.modifiedBy || '—'}</td>
                                                                     <td className="billing-table-type">{formatDate(flow.lastModified)}</td>
-                                                                    <td>
+                                                                    <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                                                         <button
                                                                             className="billing-refresh-btn"
                                                                             style={{ padding: '4px', lineHeight: 0 }}
@@ -329,6 +360,21 @@ export const AutomateFlowPage: React.FC = () => {
                                                                             onClick={e => { e.stopPropagation(); openHistory(flow); }}
                                                                         >
                                                                             <History size={13} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => handleDeleteClick(flow, e)}
+                                                                            disabled={deletingId === flow.id}
+                                                                            title="Xóa flow"
+                                                                            style={{
+                                                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                                                color: 'var(--text-secondary)', padding: 4, borderRadius: 4,
+                                                                                opacity: deletingId === flow.id ? 0.3 : 0.5,
+                                                                                transition: 'all 0.15s',
+                                                                            }}
+                                                                            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                                            onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                                                        >
+                                                                            {deletingId === flow.id ? <RefreshCw size={13} className="spin" /> : <Trash2 size={13} />}
                                                                         </button>
                                                                     </td>
                                                                 </tr>
@@ -551,6 +597,17 @@ export const AutomateFlowPage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Confirm delete dialog */}
+            <ConfirmDialog
+                open={!!confirmTarget}
+                title={`Xóa flow "${confirmTarget?.name || ''}"?`}
+                confirmLabel="Xóa"
+                variant="danger"
+                loading={!!deletingId}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmTarget(null)}
+            />
         </div>
     );
 };
@@ -560,14 +617,27 @@ export const AutomateFlowPage: React.FC = () => {
    ═══════════════════════════════════════════════ */
 
 /* ── KPI Card ── */
-function KpiCard({ icon, label, value, colorClass }: { icon: React.ReactNode; label: string; value: string; colorClass: string }) {
+function StatCard({ icon, label, value, sub, colorVar }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub: string; colorVar: string }) {
     return (
-        <div className={`flow-kpi-card flow-kpi-${colorClass}`}>
-            <div className="flow-kpi-top">
-                <span className="flow-kpi-label">{label}</span>
-                <span className="flow-kpi-icon">{icon}</span>
+        <div className="rounded-xl p-3 relative overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] shadow-sm group hover:shadow-md transition-all">
+            <div className="absolute top-0 left-0 w-full h-[3px]" style={{ background: colorVar }} />
+            <div
+                className="absolute -top-10 -right-10 w-24 h-24 rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-2xl"
+                style={{ background: colorVar }}
+            />
+            
+            <div className="flex items-center gap-2 mb-1.5">
+                <div className="p-1.5 rounded-lg flex items-center justify-center" style={{ background: `color-mix(in srgb, ${colorVar} 15%, transparent)`, color: colorVar }}>
+                    {icon}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] line-clamp-1" style={{ fontFamily: "var(--font-heading)" }} title={label}>
+                    {label}
+                </span>
             </div>
-            <span className="flow-kpi-value">{value}</span>
+            <div className="text-xl font-bold tracking-tight text-[var(--text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>
+                {value}
+            </div>
+            <div className="text-[11px] mt-0.5 font-medium text-[var(--text-muted)] line-clamp-1" title={sub}>{sub}</div>
         </div>
     );
 }

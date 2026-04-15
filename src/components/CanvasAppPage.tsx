@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     AppWindow, RefreshCw, AlertTriangle, Search, X,
     CheckCircle, XCircle, ChevronDown, ChevronRight,
-    ExternalLink, Play, Mail, Users,
+    ExternalLink, Play, Mail, Users, Trash2,
 } from 'lucide-react';
 import type { CanvasApp } from '@/services/azure/canvasAppService';
 import { acquireToken } from '@/services/azure/tokenService';
-import { fetchCanvasApps } from '@/services/azure/canvasAppService';
+import { fetchCanvasApps, deleteCanvasApp } from '@/services/azure/canvasAppService';
 import { powerAppsConfig, PP_ENV_ID } from '@/config/authConfig';
+import { useApiData } from '@/hooks/useApiData';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 
 function formatDate(dateStr: string): string {
@@ -24,32 +26,48 @@ function getAppMakerUrl(appId: string): string {
 export const CanvasAppPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [apps, setApps] = useState<CanvasApp[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const CACHE_KEY = `canvas_apps_${accounts[0]?.homeAccountId || 'default'}`;
+    const { data: apiData, loading, error, refresh: loadData, setData: setApps } = useApiData({
+        key: CACHE_KEY,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], powerAppsConfig.scopes);
+            return await fetchCanvasApps(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: [] as CanvasApp[]
+    });
+    
+    const apps = apiData || [];
+
     const [search, setSearch] = useState('');
-    const loadedRef = useRef(false);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmTarget, setConfirmTarget] = useState<CanvasApp | null>(null);
     const [selectedItem, setSelectedItem] = useState<CanvasApp | null>(null);
 
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (loadedRef.current && !force) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const token = await acquireToken(instance, accounts[0], powerAppsConfig.scopes);
-            const result = await fetchCanvasApps(token);
-            setApps(result);
-            loadedRef.current = true;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load canvas apps');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
+    // ─── Data Loading ───
+    // Đã chuyển sang sử dụng hook `useApiData` (Quy chuẩn Wecare Pattern A)
 
-    useEffect(() => { loadData(); }, [loadData]);
+    const handleDeleteClick = useCallback((app: CanvasApp, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setConfirmTarget(app);
+    }, []);
+
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!confirmTarget) return;
+        try {
+            setDeletingId(confirmTarget.id);
+            const token = await acquireToken(instance, accounts[0], powerAppsConfig.scopes);
+            await deleteCanvasApp(token, confirmTarget.id);
+            setApps(prev => prev.filter(a => a.id !== confirmTarget.id));
+            if (selectedItem?.id === confirmTarget.id) setSelectedItem(null);
+            setConfirmTarget(null);
+        } catch (err) {
+            alert(`Xóa thất bại: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setDeletingId(null);
+        }
+    }, [confirmTarget, instance, accounts, selectedItem]);
 
     // Group apps by owner
     const ownerGroups = useMemo(() => {
@@ -87,28 +105,28 @@ export const CanvasAppPage: React.FC = () => {
                         <span className="billing-stat-label">Total Apps</span>
                         <AppWindow size={16} style={{ color: '#a78bfa' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : apps.length}</span>
+                    <span className="billing-stat-value">{loading && apps.length === 0 ? '...' : apps.length}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Published</span>
                         <CheckCircle size={16} style={{ color: '#10b981' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : publishedCount}</span>
+                    <span className="billing-stat-value">{loading && apps.length === 0 ? '...' : publishedCount}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Shared Users</span>
                         <Users size={16} style={{ color: '#60a5fa' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : totalSharedUsers}</span>
+                    <span className="billing-stat-value">{loading && apps.length === 0 ? '...' : totalSharedUsers}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Owners</span>
                         <Users size={16} style={{ color: '#f59e0b' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : new Set(apps.map(a => a.owner.displayName || a.owner.email)).size}</span>
+                    <span className="billing-stat-value">{loading && apps.length === 0 ? '...' : new Set(apps.map(a => a.owner.displayName || a.owner.email)).size}</span>
                 </div>
             </div>
 
@@ -117,7 +135,7 @@ export const CanvasAppPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -129,19 +147,19 @@ export const CanvasAppPage: React.FC = () => {
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter apps..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
                     </div>
-                    <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                    <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
                 </div>
             </div>
 
             {/* Loading */}
-            {loading && !loadedRef.current && (
+            {loading && apps.length === 0 && (
                 <div className="billing-loading"><div className="spinner"></div><p>Đang tải canvas apps...</p></div>
             )}
 
             {/* App list grouped by owner */}
-            {loadedRef.current && (
+            {(apps.length > 0 || (!loading && apps.length === 0)) && (
                 <div className="billing-section">
                     <div className="reports-sidebar-list" style={{ maxHeight: 'none' }}>
                         {ownerGroups.map(([owner, items]) => (
@@ -163,6 +181,7 @@ export const CanvasAppPage: React.FC = () => {
                                                     <th>Shared Users</th>
                                                     <th>Created</th>
                                                     <th>Last Modified</th>
+                                                    <th style={{ width: 40, textAlign: 'center' }}></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -189,6 +208,23 @@ export const CanvasAppPage: React.FC = () => {
                                                         <td className="billing-table-type">{app.sharedUsersCount || 0}</td>
                                                         <td className="billing-table-type">{formatDate(app.createdTime)}</td>
                                                         <td className="billing-table-type">{formatDate(app.lastModifiedTime)}</td>
+                                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                                            <button
+                                                                onClick={(e) => handleDeleteClick(app, e)}
+                                                                disabled={deletingId === app.id}
+                                                                title="Xóa app"
+                                                                style={{
+                                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                                    color: 'var(--text-secondary)', padding: 4, borderRadius: 4,
+                                                                    opacity: deletingId === app.id ? 0.3 : 0.5,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                                            >
+                                                                {deletingId === app.id ? <RefreshCw size={14} className="spin" /> : <Trash2 size={14} />}
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -300,6 +336,17 @@ export const CanvasAppPage: React.FC = () => {
                     </div>
                 </>
             )}
+
+            {/* Confirm delete dialog */}
+            <ConfirmDialog
+                open={!!confirmTarget}
+                title={`Xóa app "${confirmTarget?.displayName || ''}"?`}
+                confirmLabel="Xóa"
+                variant="danger"
+                loading={!!deletingId}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmTarget(null)}
+            />
         </div>
     );
 };

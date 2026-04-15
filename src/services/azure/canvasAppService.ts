@@ -106,3 +106,25 @@ export async function fetchCanvasApps(accessToken: string): Promise<CanvasApp[]>
         } as CanvasApp;
     });
 }
+
+// ── Delete Canvas App ──
+
+export async function deleteCanvasApp(accessToken: string, appId: string): Promise<void> {
+    const url = `${powerAppsConfig.baseUrl}/providers/Microsoft.PowerApps/scopes/admin/environments/${PP_ENV_ID}/apps/${appId}?api-version=2016-11-01`;
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+        },
+    });
+
+    if (!response.ok && response.status !== 204) {
+        const errorText = await response.text();
+        console.error('[CanvasAppService] Delete failed:', response.status, errorText);
+        throw new Error(`Delete app failed: ${response.status} — ${errorText}`);
+    }
+
+    console.log('[CanvasAppService] Deleted app:', appId);
+}

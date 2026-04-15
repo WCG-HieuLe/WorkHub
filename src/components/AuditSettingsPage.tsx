@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     ScanSearch, RefreshCw, AlertTriangle, Search,
-    X, CheckCircle, XCircle, Loader2,
+    X, Loader2,
     Database, ShieldCheck, ShieldOff,
 } from 'lucide-react';
 import type { AuditTableInfo } from '@/services/azure/auditSettingsService';
@@ -29,6 +29,7 @@ export const AuditSettingsPage: React.FC = () => {
     const [detailLoading, setDetailLoading] = useState(false);
     const [toggling, setToggling] = useState(false);
     const [confirmToggle, setConfirmToggle] = useState(false);
+    const [toggleTarget, setToggleTarget] = useState<AuditTableInfo | null>(null);
 
     const loadData = useCallback(async (force = false) => {
         if (!isAuthenticated || accounts.length === 0) return;
@@ -71,40 +72,44 @@ export const AuditSettingsPage: React.FC = () => {
         }
     }, [instance, accounts]);
 
-    // Toggle audit handler
+    // Toggle audit handler — uses toggleTarget (decoupled from sidebar selectedItem)
     const handleToggleAudit = useCallback(async () => {
-        if (!selectedItem || !isAuthenticated || accounts.length === 0) return;
+        if (!toggleTarget || !isAuthenticated || accounts.length === 0) return;
+        const target = toggleTarget;
         setToggling(true);
         setConfirmToggle(false);
         try {
             const token = await acquireToken(instance, accounts[0], dataverseConfig.scopes);
-            const newValue = !selectedItem.isAuditEnabled;
-            await updateTableAudit(token, selectedItem.logicalName, newValue);
+            const newValue = !target.isAuditEnabled;
+            await updateTableAudit(token, target.logicalName, newValue);
             // Clear cached detail (audit status changed → columns may differ)
-            const updated = { ...selectedItem, isAuditEnabled: newValue, detail: undefined };
+            const updatedBase = { ...target, isAuditEnabled: newValue, detail: undefined };
             setTables(prev => prev.map(t =>
-                t.logicalName === selectedItem.logicalName
+                t.logicalName === target.logicalName
                     ? { ...t, isAuditEnabled: newValue, detail: undefined }
                     : t
             ));
-            setSelectedItem(updated);
+            // Sync selectedItem if it's the same table
+            if (selectedItem?.logicalName === target.logicalName) {
+                setSelectedItem(updatedBase);
+            }
             // Re-fetch detail with new audit state
-            setDetailLoading(true);
-            const detail = await fetchTableAuditDetail(token, selectedItem.logicalName, newValue);
-            const withDetail = { ...updated, detail };
-            setSelectedItem(withDetail);
+            const detail = await fetchTableAuditDetail(token, target.logicalName, newValue);
+            const withDetail = { ...updatedBase, detail };
             setTables(prev => prev.map(t =>
-                t.logicalName === selectedItem.logicalName ? withDetail : t
+                t.logicalName === target.logicalName ? withDetail : t
             ));
-            setDetailLoading(false);
+            if (selectedItem?.logicalName === target.logicalName) {
+                setSelectedItem(withDetail);
+            }
         } catch (err) {
             console.error('Toggle audit failed:', err);
             alert(`Failed to toggle audit: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setToggling(false);
-            setDetailLoading(false);
+            setToggleTarget(null);
         }
-    }, [selectedItem, instance, accounts, isAuthenticated]);
+    }, [toggleTarget, selectedItem, instance, accounts, isAuthenticated]);
 
     // Stats
     const auditOnCount = tables.filter(t => t.isAuditEnabled).length;
@@ -210,7 +215,8 @@ export const AuditSettingsPage: React.FC = () => {
                                 <tr>
                                     <th>Display Name</th>
                                     <th>Logical Name</th>
-                                    <th>Audit Status</th>
+                                    <th style={{ textAlign: 'center' }}>Columns</th>
+                                    <th style={{ textAlign: 'center' }}>Audit</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -218,14 +224,23 @@ export const AuditSettingsPage: React.FC = () => {
                                     <tr key={table.logicalName} className="clickable-row" onClick={() => handleRowClick(table)}>
                                         <td className="billing-table-name">{table.displayName}</td>
                                         <td className="billing-table-type" style={{ fontFamily: 'monospace', fontSize: '11px' }}>{table.logicalName}</td>
-                                        <td>
-                                            <span className="status-badge" style={{
-                                                color: table.isAuditEnabled ? '#10b981' : '#ef4444',
-                                                background: table.isAuditEnabled ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                                            }}>
-                                                {table.isAuditEnabled ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                                                {table.isAuditEnabled ? 'ON' : 'OFF'}
-                                            </span>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {table.detail
+                                                ? <span style={{ fontSize: '0.75rem', color: table.detail.auditedColumns.length > 0 ? '#a78bfa' : 'var(--text-muted)' }}>{table.detail.auditedColumns.length}</span>
+                                                : <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</span>
+                                            }
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button
+                                                className={`audit-switch ${table.isAuditEnabled ? 'audit-switch--on' : ''}`}
+                                                onClick={(e) => { e.stopPropagation(); setToggleTarget(table); setConfirmToggle(true); }}
+                                                disabled={toggling}
+                                                title={table.isAuditEnabled ? 'Tắt Audit' : 'Bật Audit'}
+                                            >
+                                                <span className="audit-switch-thumb">
+                                                    {toggling && toggleTarget?.logicalName === table.logicalName && <Loader2 size={10} className="spin" />}
+                                                </span>
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -261,11 +276,11 @@ export const AuditSettingsPage: React.FC = () => {
                                     <div className="detail-meta-item"><div className="meta-label">Audit Status</div><div className="meta-value">
                                         <button
                                             className={`audit-switch ${selectedItem.isAuditEnabled ? 'audit-switch--on' : ''}`}
-                                            onClick={() => setConfirmToggle(true)}
+                                            onClick={() => { setToggleTarget(selectedItem); setConfirmToggle(true); }}
                                             disabled={toggling}
                                         >
                                             <span className="audit-switch-thumb">
-                                                {toggling && <Loader2 size={10} className="spin" />}
+                                                {toggling && toggleTarget?.logicalName === selectedItem.logicalName && <Loader2 size={10} className="spin" />}
                                             </span>
                                         </button>
                                     </div></div>
@@ -334,30 +349,30 @@ export const AuditSettingsPage: React.FC = () => {
             )}
 
             {/* Confirm Toggle Dialog */}
-            {confirmToggle && selectedItem && (
-                <div className="modal-overlay" onClick={() => setConfirmToggle(false)}>
+            {confirmToggle && toggleTarget && (
+                <div className="modal-overlay" onClick={() => { setConfirmToggle(false); setToggleTarget(null); }}>
                     <div className="modal-content audit-confirm-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3 className="audit-confirm-title">
                                 <AlertTriangle size={16} />
-                                {selectedItem.isAuditEnabled ? 'Tắt Audit?' : 'Bật Audit?'}
+                                {toggleTarget.isAuditEnabled ? 'Tắt Audit?' : 'Bật Audit?'}
                             </h3>
-                            <button className="close-modal-btn" onClick={() => setConfirmToggle(false)}>&times;</button>
+                            <button className="close-modal-btn" onClick={() => { setConfirmToggle(false); setToggleTarget(null); }}>&times;</button>
                         </div>
                         <div className="audit-confirm-body">
                             <p>
-                                {selectedItem.isAuditEnabled
-                                    ? <>Bạn sắp <strong className="text-danger">tắt audit</strong> cho table <strong>{selectedItem.displayName}</strong>. Các thay đổi dữ liệu sẽ <strong>không được ghi log</strong> nữa từ thời điểm này.</>
-                                    : <>Bạn sắp <strong className="text-success">bật audit</strong> cho table <strong>{selectedItem.displayName}</strong>. Mọi thay đổi dữ liệu sẽ được ghi log từ thời điểm này.</>
+                                {toggleTarget.isAuditEnabled
+                                    ? <>Bạn sắp <strong className="text-danger">tắt audit</strong> cho table <strong>{toggleTarget.displayName}</strong>. Các thay đổi dữ liệu sẽ <strong>không được ghi log</strong> nữa từ thời điểm này.</>
+                                    : <>Bạn sắp <strong className="text-success">bật audit</strong> cho table <strong>{toggleTarget.displayName}</strong>. Mọi thay đổi dữ liệu sẽ được ghi log từ thời điểm này.</>
                                 }
                             </p>
                             <div className="audit-confirm-actions">
-                                <button className="audit-confirm-btn" onClick={() => setConfirmToggle(false)}>Hủy</button>
+                                <button className="audit-confirm-btn" onClick={() => { setConfirmToggle(false); setToggleTarget(null); }}>Hủy</button>
                                 <button
-                                    className={`audit-confirm-btn ${selectedItem.isAuditEnabled ? 'audit-confirm-btn--danger' : 'audit-confirm-btn--success'}`}
+                                    className={`audit-confirm-btn ${toggleTarget.isAuditEnabled ? 'audit-confirm-btn--danger' : 'audit-confirm-btn--success'}`}
                                     onClick={handleToggleAudit}
                                 >
-                                    {selectedItem.isAuditEnabled ? <><ShieldOff size={13} /> Tắt Audit</> : <><ShieldCheck size={13} /> Bật Audit</>}
+                                    {toggleTarget.isAuditEnabled ? <><ShieldOff size={13} /> Tắt Audit</> : <><ShieldCheck size={13} /> Bật Audit</>}
                                 </button>
                             </div>
                         </div>

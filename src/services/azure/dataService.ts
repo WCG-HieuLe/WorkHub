@@ -502,3 +502,42 @@ export async function fetchDataflowRefreshSchedule(
         return null;
     }
 }
+
+// ── Delete PA Dataflow (Dataverse) ──
+
+export async function deleteDataflow(accessToken: string, dataflowId: string): Promise<void> {
+    const url = `${dataverseConfig.baseUrl}/msdyn_dataflows(${dataflowId})`;
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0',
+        },
+    });
+    if (!response.ok && response.status !== 204) {
+        const errorText = await response.text();
+        console.error('[DataService] Delete PA dataflow failed:', response.status, errorText);
+        throw new Error(`Delete dataflow failed: ${response.status}`);
+    }
+    console.log('[DataService] Deleted PA dataflow:', dataflowId);
+}
+
+// ── Delete Fabric Dataflow (Power BI REST API) ──
+
+export async function deleteFabricDataflow(accessToken: string, workspaceId: string, dataflowId: string): Promise<void> {
+    const url = `${powerBIConfig.baseUrl}/groups/${workspaceId}/dataflows/${dataflowId}`;
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    });
+    if (!response.ok && response.status !== 200 && response.status !== 204) {
+        const errorText = await response.text();
+        console.error('[DataService] Delete Fabric dataflow failed:', response.status, errorText);
+        throw new Error(`Delete Fabric dataflow failed: ${response.status}`);
+    }
+    console.log('[DataService] Deleted Fabric dataflow:', dataflowId);
+}

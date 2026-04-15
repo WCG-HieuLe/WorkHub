@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
     Plug, RefreshCw, AlertTriangle, Search,
     X, CheckCircle, XCircle, ChevronDown, ChevronRight,
-    Zap, ExternalLink,
+    Zap, ExternalLink, Trash2,
 } from 'lucide-react';
 import type { ConnectionInfo } from '@/services/azure/connectionService';
-import { fetchConnections } from '@/services/azure/connectionService';
+import { fetchConnections, deleteConnection } from '@/services/azure/connectionService';
 import { acquireToken } from '@/services/azure/tokenService';
 import { powerAppsConfig, PP_ENV_ID } from '@/config/authConfig';
+import { useApiData } from '@/hooks/useApiData';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type FilterMode = 'all' | 'connected' | 'error';
 
@@ -25,33 +27,50 @@ function getConnectionUrl(connId: string): string {
 export const ConnectionsPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [connections, setConnections] = useState<ConnectionInfo[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const CACHE_KEY = `connections_${accounts[0]?.homeAccountId || 'default'}`;
+    const { data: apiData, loading, error, refresh: loadData, setData: setConnections } = useApiData({
+        key: CACHE_KEY,
+        fetcher: async () => {
+            const token = await acquireToken(instance, accounts[0], powerAppsConfig.scopes);
+            return await fetchConnections(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: [] as ConnectionInfo[]
+    });
+
+    const connections = apiData || [];
+
     const [search, setSearch] = useState('');
     const [filterMode, setFilterMode] = useState<FilterMode>('all');
-    const loadedRef = useRef(false);
+    
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [selectedItem, setSelectedItem] = useState<ConnectionInfo | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmTarget, setConfirmTarget] = useState<ConnectionInfo | null>(null);
 
-    const loadData = useCallback(async (force = false) => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        if (loadedRef.current && !force) return;
-        setLoading(true);
-        setError(null);
+    // ─── Data Loading ───
+    // Đã chuyển sang sử dụng hook `useApiData` (Quy chuẩn Wecare Pattern A)
+
+    const handleDeleteClick = useCallback((conn: ConnectionInfo, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setConfirmTarget(conn);
+    }, []);
+
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!confirmTarget) return;
         try {
+            setDeletingId(confirmTarget.id);
             const token = await acquireToken(instance, accounts[0], powerAppsConfig.scopes);
-            const result = await fetchConnections(token);
-            setConnections(result);
-            loadedRef.current = true;
+            await deleteConnection(token, confirmTarget.connectorName, confirmTarget.id);
+            setConnections(prev => prev.filter(c => c.id !== confirmTarget.id));
+            if (selectedItem?.id === confirmTarget.id) setSelectedItem(null);
+            setConfirmTarget(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load connections');
+            alert(`Xóa thất bại: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
-            setLoading(false);
+            setDeletingId(null);
         }
-    }, [instance, accounts, isAuthenticated]);
-
-    useEffect(() => { loadData(); }, [loadData]);
+    }, [confirmTarget, instance, accounts, selectedItem]);
 
     // Stats
     const connectedCount = connections.filter(c => c.overallStatus === 'Connected').length;
@@ -93,7 +112,7 @@ export const ConnectionsPage: React.FC = () => {
 
     // Auto-expand groups with errors
     useEffect(() => {
-        if (loadedRef.current && Object.keys(expandedGroups).length === 0) {
+        if ((connections.length > 0 || !loading) && Object.keys(expandedGroups).length === 0) {
             const initial: Record<string, boolean> = {};
             connectorGroups.forEach(([key, items]) => {
                 initial[key] = items.some(c => c.overallStatus === 'Error');
@@ -104,7 +123,7 @@ export const ConnectionsPage: React.FC = () => {
             }
             setExpandedGroups(initial);
         }
-    }, [connectorGroups, loadedRef.current]);
+    }, [connectorGroups, loading, connections.length]);
 
     return (
         <div className="health-page">
@@ -115,28 +134,28 @@ export const ConnectionsPage: React.FC = () => {
                         <span className="billing-stat-label">Total Connections</span>
                         <Plug size={16} style={{ color: '#a78bfa' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : connections.length}</span>
+                    <span className="billing-stat-value">{loading && connections.length === 0 ? '...' : connections.length}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Connected</span>
                         <CheckCircle size={16} style={{ color: '#10b981' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : connectedCount}</span>
+                    <span className="billing-stat-value">{loading && connections.length === 0 ? '...' : connectedCount}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Error / Expired</span>
                         <XCircle size={16} style={{ color: '#ef4444' }} />
                     </div>
-                    <span className="billing-stat-value" style={errorCount > 0 ? { color: '#ef4444' } : {}}>{loading && !loadedRef.current ? '...' : errorCount}</span>
+                    <span className="billing-stat-value" style={errorCount > 0 ? { color: '#ef4444' } : {}}>{loading && connections.length === 0 ? '...' : errorCount}</span>
                 </div>
                 <div className="billing-stat-card">
                     <div className="billing-stat-header">
                         <span className="billing-stat-label">Connector Types</span>
                         <Zap size={16} style={{ color: '#f59e0b' }} />
                     </div>
-                    <span className="billing-stat-value">{loading && !loadedRef.current ? '...' : uniqueConnectors}</span>
+                    <span className="billing-stat-value">{loading && connections.length === 0 ? '...' : uniqueConnectors}</span>
                 </div>
             </div>
 
@@ -145,7 +164,7 @@ export const ConnectionsPage: React.FC = () => {
                 <div className="billing-error">
                     <AlertTriangle size={20} />
                     <div><strong>Không thể tải dữ liệu</strong><p>{error}</p></div>
-                    <button onClick={() => loadData(true)} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
+                    <button onClick={() => loadData()} className="billing-retry-btn"><RefreshCw size={14} /> Thử lại</button>
                 </div>
             )}
 
@@ -177,19 +196,19 @@ export const ConnectionsPage: React.FC = () => {
                         <Search size={14} className="reports-search-icon" />
                         <input type="text" placeholder="Filter connections..." value={search} onChange={e => setSearch(e.target.value)} className="reports-search-input" />
                     </div>
-                    <button onClick={() => loadData(true)} className="billing-refresh-btn" disabled={loading} title="Refresh">
+                    <button onClick={() => loadData()} className="billing-refresh-btn" disabled={loading} title="Refresh">
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
                 </div>
             </div>
 
             {/* Loading */}
-            {loading && !loadedRef.current && (
+            {loading && connections.length === 0 && (
                 <div className="billing-loading"><div className="spinner"></div><p>Đang tải connections...</p></div>
             )}
 
             {/* Connection list grouped by connector */}
-            {loadedRef.current && (
+            {(connections.length > 0 || (!loading && connections.length === 0)) && (
                 <div className="billing-section">
                     <div className="reports-sidebar-list" style={{ maxHeight: 'none' }}>
                         {connectorGroups.map(([connector, items]) => {
@@ -220,6 +239,7 @@ export const ConnectionsPage: React.FC = () => {
                                                         <th>Owner</th>
                                                         <th>Created</th>
                                                         <th>Last Modified</th>
+                                                        <th style={{ width: 40, textAlign: 'center' }}></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -238,6 +258,23 @@ export const ConnectionsPage: React.FC = () => {
                                                             <td className="billing-table-type">{conn.createdBy.displayName || conn.createdBy.email || '—'}</td>
                                                             <td className="billing-table-type">{formatDate(conn.createdTime)}</td>
                                                             <td className="billing-table-type">{formatDate(conn.lastModifiedTime)}</td>
+                                                            <td style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                                                <button
+                                                                    onClick={(e) => handleDeleteClick(conn, e)}
+                                                                    disabled={deletingId === conn.id}
+                                                                    title="Xóa connection"
+                                                                    style={{
+                                                                        background: 'none', border: 'none', cursor: 'pointer',
+                                                                        color: 'var(--text-secondary)', padding: 4, borderRadius: 4,
+                                                                        opacity: deletingId === conn.id ? 0.3 : 0.5,
+                                                                        transition: 'all 0.15s',
+                                                                    }}
+                                                                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                                                >
+                                                                    {deletingId === conn.id ? <RefreshCw size={14} className="spin" /> : <Trash2 size={14} />}
+                                                                </button>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -337,6 +374,17 @@ export const ConnectionsPage: React.FC = () => {
                     </div>
                 </>
             )}
+
+            {/* Confirm delete dialog */}
+            <ConfirmDialog
+                open={!!confirmTarget}
+                title={`Xóa connection "${confirmTarget?.displayName || ''}"?`}
+                confirmLabel="Xóa"
+                variant="danger"
+                loading={!!deletingId}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmTarget(null)}
+            />
         </div>
     );
 };

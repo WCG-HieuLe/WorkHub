@@ -7,6 +7,7 @@ import {
 import { acquireToken } from '@/services/azure/tokenService';
 import { fetchEnvironmentBackups, BackupData, EnvironmentBackup } from '@/services/azure/backupService';
 import { powerPlatformAdminConfig } from '@/config/authConfig';
+import { useApiData } from '@/hooks/useApiData';
 
 const envTypeColors: Record<string, { color: string; bg: string }> = {
     Production: { color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
@@ -110,30 +111,18 @@ const BackupDetailSidebar: React.FC<{
 export const BackupsPage: React.FC = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [data, setData] = useState<BackupData | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedEnv, setSelectedEnv] = useState<EnvironmentBackup | null>(null);
-
-    const loadData = useCallback(async () => {
-        if (!isAuthenticated || accounts.length === 0) return;
-        setLoading(true);
-        setError(null);
-        try {
+    
+    const { data: data, loading, error, refresh: loadData } = useApiData<BackupData | null>({
+        key: `backup_data_${accounts[0]?.homeAccountId || 'default'}`,
+        fetcher: async () => {
             const token = await acquireToken(instance, accounts[0], powerPlatformAdminConfig.scopes);
-            const backupData = await fetchEnvironmentBackups(token);
-            setData(backupData);
-        } catch (e) {
-            console.error('Backup data error:', e);
-            setError(e instanceof Error ? e.message : 'Không thể tải dữ liệu backup.');
-        } finally {
-            setLoading(false);
-        }
-    }, [instance, accounts, isAuthenticated]);
+            return await fetchEnvironmentBackups(token);
+        },
+        enabled: isAuthenticated && accounts.length > 0,
+        initialData: null
+    });
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    const [selectedEnv, setSelectedEnv] = useState<EnvironmentBackup | null>(null);
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '—';

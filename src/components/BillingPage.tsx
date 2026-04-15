@@ -27,7 +27,7 @@ export const BillingPage: React.FC = () => {
     });
 
     const loadData = useCallback(() => {
-        refresh(true);
+        refresh();
     }, [refresh]);
 
     const totalSpend = dashboard?.vendors.reduce((s, v) => s + v.totalCost, 0) || 0;

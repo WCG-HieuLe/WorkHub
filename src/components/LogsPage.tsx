@@ -291,10 +291,10 @@ export const LogsPage: React.FC = () => {
 
     const getActionStyle = (action: string) => {
         switch (action) {
-            case 'CREATE': return { color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' };
-            case 'UPDATE': return { color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' };
-            case 'DELETE': return { color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' };
-            default: return { color: '#71717a', background: 'rgba(113, 113, 122, 0.1)' };
+            case 'CREATE': return { color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.45)', boxShadow: '0 0 8px rgba(16,185,129,0.25)' };
+            case 'UPDATE': return { color: '#22d3ee', background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.4)', boxShadow: '0 0 8px rgba(34,211,238,0.2)' };
+            case 'DELETE': return { color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.45)', boxShadow: '0 0 8px rgba(239,68,68,0.25)' };
+            default: return { color: '#71717a', background: 'rgba(113,113,122,0.08)', border: '1px solid rgba(113,113,122,0.3)' };
         }
     };
 

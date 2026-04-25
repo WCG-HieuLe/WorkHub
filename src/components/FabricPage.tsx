@@ -156,7 +156,9 @@ export const FabricPage: React.FC = () => {
                                                         <td>
                                                             <span className="status-badge" style={{
                                                                 color: item.type === 'Dataset' ? '#60a5fa' : '#a78bfa',
-                                                                background: item.type === 'Dataset' ? 'rgba(96,165,250,0.1)' : 'rgba(167,139,250,0.1)',
+                                                                background: item.type === 'Dataset' ? 'rgba(96,165,250,0.08)' : 'rgba(167,139,250,0.08)',
+                                                                border: `1px solid ${item.type === 'Dataset' ? 'rgba(96,165,250,0.4)' : 'rgba(167,139,250,0.4)'}`,
+                                                                boxShadow: item.type === 'Dataset' ? '0 0 8px rgba(96,165,250,0.2)' : '0 0 8px rgba(167,139,250,0.2)',
                                                             }}>
                                                                 {item.type === 'Dataset' ? <Database size={12} /> : <Layers size={12} />}
                                                                 {item.type}
@@ -200,7 +202,9 @@ export const FabricPage: React.FC = () => {
                                     <div className="detail-meta-item"><div className="meta-label">Type</div><div className="meta-value">
                                         <span className="status-badge" style={{
                                             color: selectedItem.type === 'Dataset' ? '#60a5fa' : '#a78bfa',
-                                            background: selectedItem.type === 'Dataset' ? 'rgba(96,165,250,0.1)' : 'rgba(167,139,250,0.1)',
+                                            background: selectedItem.type === 'Dataset' ? 'rgba(96,165,250,0.08)' : 'rgba(167,139,250,0.08)',
+                                            border: `1px solid ${selectedItem.type === 'Dataset' ? 'rgba(96,165,250,0.4)' : 'rgba(167,139,250,0.4)'}`,
+                                            boxShadow: selectedItem.type === 'Dataset' ? '0 0 8px rgba(96,165,250,0.2)' : '0 0 8px rgba(167,139,250,0.2)',
                                         }}>
                                             {selectedItem.type === 'Dataset' ? <Database size={12} /> : <Layers size={12} />}
                                             {selectedItem.type}
@@ -210,8 +214,8 @@ export const FabricPage: React.FC = () => {
                                     <div className="detail-meta-item"><div className="meta-label">Configured By</div><div className="meta-value">{selectedItem.configuredBy || '—'}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Refreshable</div><div className="meta-value">
                                         {selectedItem.isRefreshable
-                                            ? <span className="status-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><CheckCircle size={12} /> Yes</span>
-                                            : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.1)' }}><XCircle size={12} /> No</span>
+                                            ? <span className="status-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.45)', boxShadow: '0 0 8px rgba(16,185,129,0.25)' }}><CheckCircle size={12} /> Yes</span>
+                                            : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.08)', border: '1px solid rgba(113,113,122,0.3)' }}><XCircle size={12} /> No</span>
                                         }
                                     </div></div>
                                 </div>

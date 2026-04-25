@@ -3073,21 +3073,24 @@ header.header-container {
 }
 
 .status-pending {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.08);
   color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
 }
 
 .status-approved {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.08);
   color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
 }
 
 .status-rejected {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.08);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
 }
 
 /* Approval Status Select Dropdown */
@@ -5190,10 +5193,13 @@ header.header-container {
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: var(--component-glass);
+  background: rgba(5, 12, 26, 0.97);
   backdrop-filter: blur(var(--glass-blur));
   border-right: 1px solid var(--border);
   overflow: hidden;
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
 }
 
 .reports-sidebar-header {
@@ -5348,16 +5354,16 @@ header.header-container {
 }
 
 .reports-item:hover {
-  background: rgba(34, 211, 238, 0.04);
+  background: transparent;
   color: rgba(232, 244, 255, 0.9);
-  border-left-color: rgba(34, 211, 238, 0.2);
+  border-left-color: rgba(34, 211, 238, 0.25);
 }
 
 .reports-item.active {
-  background: rgba(34, 211, 238, 0.1);
+  background: transparent;
   color: #22d3ee;
-  border-left-color: #22d3ee;
-  text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+  border-left-color: rgba(34, 211, 238, 0.7);
+  text-shadow: 0 0 6px rgba(34, 211, 238, 0.3);
 }
 
 .reports-item-icon {
@@ -8298,5 +8304,35 @@ table.billing-table tr {
 }
 .clickable-row:hover td {
   color: rgba(232, 244, 255, 0.95) !important;
+}
+
+/* ── Reports list: match left sidebar style ── */
+.reports-sidebar-list,
+.reports-ws-group,
+.reports-ws-items {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.reports-item {
+  background: transparent !important;
+  border: none !important;
+  border-left: 2px solid transparent !important;
+  box-shadow: none !important;
+  color: rgba(180, 205, 230, 0.8) !important;
+}
+
+.reports-item.active {
+  background: rgba(34, 211, 238, 0.08) !important;
+  color: #22d3ee !important;
+  border-left: 2px solid #22d3ee !important;
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.reports-item:hover:not(.active) {
+  background: rgba(34, 211, 238, 0.04) !important;
+  color: rgba(232, 244, 255, 0.9) !important;
 }
 

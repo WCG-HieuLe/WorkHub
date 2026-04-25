@@ -249,7 +249,9 @@ export const ConnectionsPage: React.FC = () => {
                                                             <td>
                                                                 <span className="status-badge" style={{
                                                                     color: conn.overallStatus === 'Connected' ? '#10b981' : '#ef4444',
-                                                                    background: conn.overallStatus === 'Connected' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                                                                    background: conn.overallStatus === 'Connected' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                                                                    border: `1px solid ${conn.overallStatus === 'Connected' ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.45)'}`,
+                                                                    boxShadow: conn.overallStatus === 'Connected' ? '0 0 8px rgba(16,185,129,0.25)' : '0 0 8px rgba(239,68,68,0.25)',
                                                                 }}>
                                                                     {conn.overallStatus === 'Connected' ? <CheckCircle size={12} /> : <XCircle size={12} />}
                                                                     {conn.overallStatus}

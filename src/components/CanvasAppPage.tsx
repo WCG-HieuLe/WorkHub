@@ -191,7 +191,9 @@ export const CanvasAppPage: React.FC = () => {
                                                         <td>
                                                             <span className="status-badge" style={{
                                                                 color: '#a78bfa',
-                                                                background: 'rgba(167,139,250,0.1)',
+                                                                background: 'rgba(167,139,250,0.08)',
+                                                                border: '1px solid rgba(167,139,250,0.4)',
+                                                                boxShadow: '0 0 8px rgba(167,139,250,0.2)',
                                                             }}>
                                                                 {app.appType || 'Canvas App'}
                                                             </span>
@@ -199,7 +201,9 @@ export const CanvasAppPage: React.FC = () => {
                                                         <td>
                                                             <span className="status-badge" style={{
                                                                 color: app.status === 'Published' ? '#10b981' : '#f59e0b',
-                                                                background: app.status === 'Published' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                                                background: app.status === 'Published' ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)',
+                                                                border: `1px solid ${app.status === 'Published' ? 'rgba(16,185,129,0.45)' : 'rgba(245,158,11,0.45)'}`,
+                                                                boxShadow: app.status === 'Published' ? '0 0 8px rgba(16,185,129,0.25)' : '0 0 8px rgba(245,158,11,0.25)',
                                                             }}>
                                                                 {app.status === 'Published' ? <CheckCircle size={12} /> : <XCircle size={12} />}
                                                                 {app.status || 'Published'}

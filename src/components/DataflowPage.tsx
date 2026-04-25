@@ -419,7 +419,7 @@ export const DataflowPage: React.FC = () => {
                                                         <td className="billing-table-type">{df.lastRefreshTime ? formatDateTime(df.lastRefreshTime) : '—'}</td>
                                                         <td>
                                                             {df.hasSchedule ? (
-                                                                <span className="status-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>
+                                                                <span className="status-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.45)', boxShadow: '0 0 8px rgba(245,158,11,0.25)' }}>
                                                                     <CalendarClock size={12} /> Yes
                                                                 </span>
                                                             ) : (
@@ -736,8 +736,8 @@ export const DataflowPage: React.FC = () => {
                                     <div className="detail-meta-grid">
                                         <div className="detail-meta-item"><div className="meta-label">Enabled</div><div className="meta-value">
                                             {fabricSchedule.enabled
-                                                ? <span className="status-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><CheckCircle size={12} /> Yes</span>
-                                                : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.1)' }}><XCircle size={12} /> No</span>
+                                                ? <span className="status-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.45)', boxShadow: '0 0 8px rgba(16,185,129,0.25)' }}><CheckCircle size={12} /> Yes</span>
+                                                : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.08)', border: '1px solid rgba(113,113,122,0.3)' }}><XCircle size={12} /> No</span>
                                             }
                                         </div></div>
                                         <div className="detail-meta-item"><div className="meta-label">Timezone</div><div className="meta-value" style={{ fontSize: '0.72rem' }}>{fabricSchedule.localTimeZoneId || '—'}</div></div>
@@ -796,7 +796,9 @@ export const DataflowPage: React.FC = () => {
                                                             <td>
                                                                 <span className="status-badge" style={{
                                                                     color: isOk ? '#10b981' : isFail ? '#ef4444' : '#f59e0b',
-                                                                    background: isOk ? 'rgba(16,185,129,0.1)' : isFail ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                                                    background: isOk ? 'rgba(16,185,129,0.08)' : isFail ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+                                                                    border: `1px solid ${isOk ? 'rgba(16,185,129,0.45)' : isFail ? 'rgba(239,68,68,0.45)' : 'rgba(245,158,11,0.45)'}`,
+                                                                    boxShadow: isOk ? '0 0 8px rgba(16,185,129,0.25)' : isFail ? '0 0 8px rgba(239,68,68,0.25)' : '0 0 8px rgba(245,158,11,0.25)',
                                                                 }}>
                                                                     {isOk ? <CheckCircle size={11} /> : isFail ? <XCircle size={11} /> : <Clock size={11} />}
                                                                     {run.status}
@@ -834,7 +836,9 @@ export const DataflowPage: React.FC = () => {
                                                         <td>
                                                             <span className="status-badge" style={{
                                                                 color: t.status === 'Success' ? '#10b981' : t.status === 'Failed' ? '#ef4444' : '#f59e0b',
-                                                                background: t.status === 'Success' ? 'rgba(16,185,129,0.1)' : t.status === 'Failed' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                                                background: t.status === 'Success' ? 'rgba(16,185,129,0.08)' : t.status === 'Failed' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+                                                                border: `1px solid ${t.status === 'Success' ? 'rgba(16,185,129,0.45)' : t.status === 'Failed' ? 'rgba(239,68,68,0.45)' : 'rgba(245,158,11,0.45)'}`,
+                                                                boxShadow: t.status === 'Success' ? '0 0 8px rgba(16,185,129,0.25)' : t.status === 'Failed' ? '0 0 8px rgba(239,68,68,0.25)' : '0 0 8px rgba(245,158,11,0.25)',
                                                             }}>
                                                                 {t.status === 'Success' ? <CheckCircle size={12} /> : <XCircle size={12} />}
                                                                 {t.status}

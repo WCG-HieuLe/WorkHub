@@ -391,12 +391,12 @@ export const DataflowPage: React.FC = () => {
                                                 {items.map(df => (
                                                     <tr key={df.id} className="clickable-row" onClick={() => setSelectedPA(df)}>
                                                         <td className="billing-table-name">{df.name}</td>
-                                                        <td style={{ fontSize: '11px', maxWidth: 200 }}>
+                                                        <td style={{ fontSize: '0.72rem', maxWidth: 200 }}>
                                                             {df.entityNames.length > 0 ? (
                                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                                                                     {df.entityNames.map(e => (
                                                                         <span key={e} style={{
-                                                                            fontSize: '10px',
+                                                                            fontSize: '0.65rem',
                                                                             padding: '1px 6px',
                                                                             borderRadius: '4px',
                                                                             background: 'rgba(167,139,250,0.1)',
@@ -423,7 +423,7 @@ export const DataflowPage: React.FC = () => {
                                                                     <CalendarClock size={12} /> Yes
                                                                 </span>
                                                             ) : (
-                                                                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>—</span>
+                                                                <span className="billing-table-type" style={{ color: 'var(--text-muted)' }}>—</span>
                                                             )}
                                                         </td>
                                                         <td className="billing-table-type">{df.modifiedBy || '—'}</td>
@@ -652,14 +652,14 @@ export const DataflowPage: React.FC = () => {
                                     </a>
                                 </div>
                                 <div className="detail-meta-grid">
-                                    <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFabric.id}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{selectedFabric.id}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Workspace</div><div className="meta-value">{selectedFabric.workspaceName}</div></div>
 
                                     <div className="detail-meta-item"><div className="meta-label">Modified By</div><div className="meta-value">{selectedFabric.modifiedBy || '—'}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Modified</div><div className="meta-value">{formatDateTime(selectedFabric.modifiedDateTime)}</div></div>
 
                                     {selectedFabric.modelUrl && (
-                                        <div className="detail-meta-item"><div className="meta-label">Model URL</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedFabric.modelUrl}</div></div>
+                                        <div className="detail-meta-item"><div className="meta-label">Model URL</div><div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{selectedFabric.modelUrl}</div></div>
                                     )}
                                 </div>
                             </div>
@@ -668,7 +668,7 @@ export const DataflowPage: React.FC = () => {
                             {selectedFabric.description && (
                                 <div className="detail-section">
                                     <div className="detail-section-title">Description</div>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{selectedFabric.description}</p>
+                                    <p className="detail-description">{selectedFabric.description}</p>
                                 </div>
                             )}
 
@@ -680,7 +680,7 @@ export const DataflowPage: React.FC = () => {
                                         {selectedFabric.datasourceUsages.map((ds, i) => (
                                             <div key={i} className="detail-meta-item" style={{ gridColumn: '1 / -1' }}>
                                                 <div className="meta-label">{ds.datasourceType || 'Unknown'}</div>
-                                                <div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                                                <div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>
                                                     {Object.entries(ds.connectionDetails).map(([k, v]) => (
                                                         <div key={k}><span style={{ color: 'var(--text-muted)' }}>{k}:</span> {v}</div>
                                                     ))}
@@ -701,7 +701,7 @@ export const DataflowPage: React.FC = () => {
                                             return (
                                                 <div key={i} className="detail-meta-item" style={{ gridColumn: '1 / -1' }}>
                                                     <div className="meta-label">Depends on</div>
-                                                    <div className="meta-value" style={{ fontSize: '11px' }}>
+                                                    <div className="meta-value" style={{ fontSize: '0.72rem' }}>
                                                         {upstream ? upstream.name : ud.targetDataflowId}
                                                     </div>
                                                 </div>
@@ -740,16 +740,16 @@ export const DataflowPage: React.FC = () => {
                                                 : <span className="status-badge" style={{ color: '#71717a', background: 'rgba(113,113,122,0.1)' }}><XCircle size={12} /> No</span>
                                             }
                                         </div></div>
-                                        <div className="detail-meta-item"><div className="meta-label">Timezone</div><div className="meta-value" style={{ fontSize: '11px' }}>{fabricSchedule.localTimeZoneId || '—'}</div></div>
+                                        <div className="detail-meta-item"><div className="meta-label">Timezone</div><div className="meta-value" style={{ fontSize: '0.72rem' }}>{fabricSchedule.localTimeZoneId || '—'}</div></div>
                                         {fabricSchedule.days.length > 0 && (
-                                            <div className="detail-meta-item"><div className="meta-label">Days</div><div className="meta-value" style={{ fontSize: '11px' }}>{fabricSchedule.days.join(', ')}</div></div>
+                                            <div className="detail-meta-item"><div className="meta-label">Days</div><div className="meta-value" style={{ fontSize: '0.72rem' }}>{fabricSchedule.days.join(', ')}</div></div>
                                         )}
                                         {fabricSchedule.times.length > 0 && (
-                                            <div className="detail-meta-item"><div className="meta-label">Times</div><div className="meta-value" style={{ fontSize: '11px' }}>{fabricSchedule.times.join(', ')}</div></div>
+                                            <div className="detail-meta-item"><div className="meta-label">Times</div><div className="meta-value" style={{ fontSize: '0.72rem' }}>{fabricSchedule.times.join(', ')}</div></div>
                                         )}
                                     </div>
                                 ) : (
-                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Không có lịch refresh</p>
+                                    <p className="detail-empty-text">Không có lịch refresh</p>
                                 )}
                             </div>
                         </div>
@@ -802,12 +802,12 @@ export const DataflowPage: React.FC = () => {
                                                                     {run.status}
                                                                 </span>
                                                             </td>
-                                                            <td style={{ fontSize: '11px' }}>{run.trigger || '—'}</td>
-                                                            <td style={{ fontSize: '11px' }}>{run.entityName || '—'}</td>
-                                                            <td style={{ fontSize: '11px' }}>{formatDateTime(run.startedOn)}</td>
-                                                            <td style={{ fontSize: '11px' }}>{duration}</td>
-                                                            <td style={{ fontSize: '11px' }}>{run.rowsRead > 0 ? run.rowsRead.toLocaleString() : '—'}</td>
-                                                            <td style={{ fontSize: '11px' }}>{run.insertCount > 0 ? run.insertCount.toLocaleString() : '—'}</td>
+                                                            <td className="billing-table-type">{run.trigger || '—'}</td>
+                                                            <td className="billing-table-type">{run.entityName || '—'}</td>
+                                                            <td className="billing-table-type">{formatDateTime(run.startedOn)}</td>
+                                                            <td className="billing-table-type">{duration}</td>
+                                                            <td className="billing-table-type">{run.rowsRead > 0 ? run.rowsRead.toLocaleString() : '—'}</td>
+                                                            <td className="billing-table-type">{run.insertCount > 0 ? run.insertCount.toLocaleString() : '—'}</td>
                                                         </tr>
                                                     );
                                                 })}

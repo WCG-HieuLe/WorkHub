@@ -178,7 +178,7 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, empl
                             </button>
                         </div>
                     ) : (
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <span className="billing-stat-label">
                             💰 Đề nghị thanh toán ({dnttRecords.length})
                         </span>
                     )}

@@ -223,11 +223,11 @@ export const AuditSettingsPage: React.FC = () => {
                                 {filteredTables.map(table => (
                                     <tr key={table.logicalName} className="clickable-row" onClick={() => handleRowClick(table)}>
                                         <td className="billing-table-name">{table.displayName}</td>
-                                        <td className="billing-table-type" style={{ fontFamily: 'monospace', fontSize: '11px' }}>{table.logicalName}</td>
+                                        <td className="billing-table-type" style={{ fontFamily: 'monospace' }}>{table.logicalName}</td>
                                         <td style={{ textAlign: 'center' }}>
                                             {table.detail
                                                 ? <span style={{ fontSize: '0.75rem', color: table.detail.auditedColumns.length > 0 ? '#a78bfa' : 'var(--text-muted)' }}>{table.detail.auditedColumns.length}</span>
-                                                : <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</span>
+                                                : <span className="billing-stat-label" style={{ color: 'var(--text-muted)' }}>—</span>
                                             }
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
@@ -272,7 +272,7 @@ export const AuditSettingsPage: React.FC = () => {
                                 <div className="detail-section-title">Table Info</div>
                                 <div className="detail-meta-grid">
                                     <div className="detail-meta-item"><div className="meta-label">Display Name</div><div className="meta-value">{selectedItem.displayName}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Logical Name</div><div className="meta-value" style={{ fontFamily: 'monospace', fontSize: '11px' }}>{selectedItem.logicalName}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Logical Name</div><div className="meta-value" style={{ fontFamily: 'monospace', fontSize: '0.72rem' }}>{selectedItem.logicalName}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Audit Status</div><div className="meta-value">
                                         <button
                                             className={`audit-switch ${selectedItem.isAuditEnabled ? 'audit-switch--on' : ''}`}

@@ -223,7 +223,7 @@ export const ConnectionsPage: React.FC = () => {
                                         <span className="reports-ws-name">{connector}</span>
                                         <span className="reports-ws-count">{items.length}</span>
                                         {groupErrors > 0 && (
-                                            <span className="status-badge" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', fontSize: '10px', marginLeft: 4 }}>
+                                            <span className="status-badge" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', fontSize: '0.65rem', marginLeft: 4 }}>
                                                 <XCircle size={10} /> {groupErrors}
                                             </span>
                                         )}
@@ -317,7 +317,7 @@ export const ConnectionsPage: React.FC = () => {
                                 </div>
                                 <div className="detail-meta-grid">
                                     <div className="detail-meta-item"><div className="meta-label">Name</div><div className="meta-value">{selectedItem.displayName}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Connection ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all', fontFamily: 'monospace' }}>{selectedItem.id}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Connection ID</div><div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all', fontFamily: 'monospace' }}>{selectedItem.id}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Connector</div><div className="meta-value">
                                         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             {selectedItem.iconUri && <img src={selectedItem.iconUri} alt="" style={{ width: 14, height: 14, borderRadius: 2 }} />}
@@ -353,7 +353,7 @@ export const ConnectionsPage: React.FC = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                         {selectedItem.statuses.map((s, i) => (
                                             <div key={i} style={{
-                                                padding: '8px 10px', borderRadius: 6, fontSize: '12px',
+                                                padding: '8px 10px', borderRadius: 6, fontSize: '0.75rem',
                                                 background: s.status === 'Error' ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)',
                                             }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: s.error ? 4 : 0 }}>
@@ -361,7 +361,7 @@ export const ConnectionsPage: React.FC = () => {
                                                     <span style={{ color: 'var(--text-primary)' }}>{s.status}</span>
                                                 </div>
                                                 {s.error && (
-                                                    <div style={{ paddingLeft: 18, color: 'var(--text-secondary)', fontSize: '11px' }}>
+                                                    <div style={{ paddingLeft: 18, color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
                                                         <span style={{ color: '#ef4444' }}>{s.error.code}</span>: {s.error.message}
                                                     </div>
                                                 )}

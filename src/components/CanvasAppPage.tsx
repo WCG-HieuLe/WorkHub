@@ -277,7 +277,7 @@ export const CanvasAppPage: React.FC = () => {
                                 </div>
                                 <div className="detail-meta-grid">
                                     <div className="detail-meta-item"><div className="meta-label">Name</div><div className="meta-value">{selectedItem.displayName}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">App ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedItem.id}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">App ID</div><div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{selectedItem.id}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Status</div><div className="meta-value">
                                         <span className="status-badge" style={{
                                             color: selectedItem.status === 'Published' ? '#10b981' : '#f59e0b',
@@ -327,7 +327,7 @@ export const CanvasAppPage: React.FC = () => {
                             {selectedItem.description && (
                                 <div className="detail-section">
                                     <div className="detail-section-title">Description</div>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedItem.description}</p>
+                                    <p className="detail-description">{selectedItem.description}</p>
                                 </div>
                             )}
 

@@ -121,7 +121,7 @@ export const EnvironmentPage: React.FC = () => {
                                             {env.urlName ? (
                                                 <a href={`https://${env.urlName}.crm5.dynamics.com`} target="_blank" rel="noopener noreferrer"
                                                     onClick={e => e.stopPropagation()}
-                                                    style={{ color: '#a78bfa', fontSize: '12px' }}
+                                                    style={{ color: '#a78bfa', fontSize: '0.75rem' }}
                                                 >
                                                     <Globe size={12} style={{ marginRight: 4 }} />
                                                     {env.urlName}
@@ -156,7 +156,7 @@ export const EnvironmentPage: React.FC = () => {
                                 <div className="detail-section-title">Environment Info</div>
                                 <div className="detail-meta-grid">
                                     <div className="detail-meta-item"><div className="meta-label">Display Name</div><div className="meta-value">{selectedEnv.name}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">Unique Name</div><div className="meta-value" style={{ fontSize: '11px' }}>{selectedEnv.uniqueName || '—'}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">Unique Name</div><div className="meta-value" style={{ fontSize: '0.72rem' }}>{selectedEnv.uniqueName || '—'}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Status</div><div className="meta-value">
                                         <span className="status-badge" style={{
                                             color: (selectedEnv.state === 'Succeeded' || selectedEnv.state === 'Ready') ? '#10b981' : '#f59e0b',
@@ -168,7 +168,7 @@ export const EnvironmentPage: React.FC = () => {
                                     <div className="detail-meta-item"><div className="meta-label">Version</div><div className="meta-value">{selectedEnv.version || '—'}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">URL</div><div className="meta-value">
                                         {selectedEnv.urlName ? (
-                                            <a href={`https://${selectedEnv.urlName}.crm5.dynamics.com`} target="_blank" rel="noopener noreferrer" style={{ color: '#a78bfa', fontSize: '11px' }}>
+                                            <a href={`https://${selectedEnv.urlName}.crm5.dynamics.com`} target="_blank" rel="noopener noreferrer" style={{ color: '#a78bfa', fontSize: '0.72rem' }}>
                                                 {selectedEnv.urlName}.crm5.dynamics.com
                                             </a>
                                         ) : '—'}

@@ -5475,6 +5475,18 @@ header.header-container {
   gap: 1rem;
 }
 
+.billing-charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .billing-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .billing-stat-card {
   background: var(--glass);
   backdrop-filter: blur(var(--glass-blur));

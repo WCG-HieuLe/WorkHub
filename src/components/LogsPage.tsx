@@ -506,7 +506,7 @@ export const LogsPage: React.FC = () => {
                             )}
                         </div>
                         <div className="reports-header-actions">
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                            <span className="billing-table-type" style={{ opacity: 0.6 }}>
                                 {((state.currentPage - 1) * filters.pageSize + 1).toLocaleString()}–{Math.min(state.currentPage * filters.pageSize, state.totalCount).toLocaleString()} of {state.totalCount.toLocaleString()}
                             </span>
                             {totalPages > 1 && (
@@ -540,20 +540,20 @@ export const LogsPage: React.FC = () => {
                                                 <Clock size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
                                                 <div style={{ lineHeight: 1.4 }}>
                                                     <div>{log.timestamp.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                                                    <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>{log.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                                                    <div style={{ opacity: 0.5, fontSize: '0.72rem' }}>{log.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="billing-table-name">{log.user.name}</td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{log.tableName}</td>
+                                        <td className="billing-table-type" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{log.tableName}</td>
                                         <td>
                                             <span className="license-status-badge" style={getActionStyle(log.action)}>{log.action}</span>
                                         </td>
                                         <td>
                                             {log.action === 'UPDATE' && log.changes && log.changes !== 'N/A' ? (
-                                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.75rem', lineHeight: 1.5 }}>{log.changes}</pre>
+                                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.72rem', lineHeight: 1.5 }}>{log.changes}</pre>
                                             ) : (
-                                                <span style={{ opacity: 0.4, fontSize: '0.75rem' }}>N/A</span>
+                                                <span className="billing-table-type" style={{ opacity: 0.4 }}>N/A</span>
                                             )}
                                         </td>
                                         <td style={{ textAlign: 'center' }}>

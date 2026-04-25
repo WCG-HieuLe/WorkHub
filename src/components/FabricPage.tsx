@@ -196,7 +196,7 @@ export const FabricPage: React.FC = () => {
                                 <div className="detail-section-title">Fabric Item Info</div>
                                 <div className="detail-meta-grid">
                                     <div className="detail-meta-item"><div className="meta-label">Name</div><div className="meta-value">{selectedItem.name}</div></div>
-                                    <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '11px', wordBreak: 'break-all' }}>{selectedItem.id}</div></div>
+                                    <div className="detail-meta-item"><div className="meta-label">ID</div><div className="meta-value" style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{selectedItem.id}</div></div>
                                     <div className="detail-meta-item"><div className="meta-label">Type</div><div className="meta-value">
                                         <span className="status-badge" style={{
                                             color: selectedItem.type === 'Dataset' ? '#60a5fa' : '#a78bfa',

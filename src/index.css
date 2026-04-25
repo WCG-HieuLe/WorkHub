@@ -27,19 +27,22 @@
 :root {
   --base-font-size: 16px;
   --heading-font-size: 20px;
-  /* Default Fallback (Zinc/Violet) */
-  --bg-primary: #09090b;
-  --bg-secondary: rgba(24, 24, 27, 0.6);
-  --bg-card: #18181b;
-  --bg-hover: #27272a;
-  --bg-header: #18181b;
+  /* Default: Deep Navy Cyberpunk */
+  --bg-primary: #02060f;
+  --bg-secondary: rgba(4, 10, 26, 0.6);
+  --bg-card: #060d1f;
+  --bg-hover: #0d1a35;
+  --bg-header: #060d1f;
 
-  --text-primary: #fafafa;
-  --text-secondary: #d4d4d8;
-  --text-muted: #71717a;
+  --text-primary: #e8f4ff;
+  --text-secondary: #94b8d8;
+  --text-muted: #4a6a8a;
 
-  --accent-primary: #a78bfa;
-  --accent-secondary: #c4b5fd;
+  /* Cyan Neon Accent */
+  --accent-primary: #22d3ee;
+  --accent-secondary: #67e8f9;
+  --accent-glow: rgba(34, 211, 238, 0.35);
+  --accent-glow-soft: rgba(34, 211, 238, 0.12);
 
   --success: #10b981;
   --warning: #f59e0b;
@@ -47,31 +50,54 @@
 
   --radius-full: 16px;
   --radius-card: 12px;
-  --glass-opacity: 0.85;
-  --glass-blur: 12px;
-  --border-opacity: 0.08;
-  --border: rgba(255, 255, 255, var(--border-opacity));
+  --glass-opacity: 0.82;
+  --glass-blur: 16px;
+  --border-opacity: 0.1;
+  --border: rgba(34, 211, 238, var(--border-opacity));
 
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 24px rgba(34, 211, 238, 0.15);
   --glass: color-mix(in srgb, var(--bg-card), transparent calc(100% - var(--glass-opacity) * 100%));
   --sidebar-glass: color-mix(in srgb, var(--sidebar-bg), transparent calc(100% - var(--glass-opacity) * 100%));
   --main-layout-glass: color-mix(in srgb, var(--main-layout-bg), transparent calc(100% - var(--glass-opacity) * 100%));
   --component-glass: color-mix(in srgb, var(--component-bg), transparent calc(100% - var(--glass-opacity) * 100%));
   --item-glass: color-mix(in srgb, var(--item-bg), transparent calc(100% - var(--glass-opacity) * 100%));
-  --overlay-bg: rgba(0, 0, 0, 0.9);
+  --overlay-bg: rgba(0, 0, 0, 0.92);
 
-  --sidebar-bg: var(--bg-card);
-  --main-layout-bg: var(--bg-card);
-  --component-bg: var(--bg-hover);
-  --item-bg: var(--bg-card);
+  --sidebar-bg: #060d1f;
+  --main-layout-bg: #060d1f;
+  --component-bg: #0d1a35;
+  --item-bg: #060d1f;
   --bg-calendar: var(--component-bg);
   --bg-cell: var(--item-bg);
-  --bg-off-day: rgba(39, 39, 42, 0.4);
-  --border-cell: rgba(255, 255, 255, var(--border-opacity));
-  --bg-input: rgba(24, 24, 27, 0.7);
+  --bg-off-day: rgba(6, 13, 31, 0.5);
+  --border-cell: rgba(34, 211, 238, 0.08);
+  --bg-input: rgba(4, 10, 26, 0.8);
 }
 
 /* ===== Background Themes ===== */
+
+/* Navy (Default — Deep Cyberpunk Blue) */
+[data-bg="navy"] {
+  --bg-primary: #02060f;
+  --bg-secondary: rgba(4, 10, 26, 0.6);
+  --bg-card: #060d1f;
+  --bg-hover: #0d1a35;
+  --bg-header: #060d1f;
+  --text-primary: #e8f4ff;
+  --text-secondary: #94b8d8;
+  --text-muted: #4a6a8a;
+  --sidebar-bg: #060d1f;
+  --main-layout-bg: #060d1f;
+  --component-bg: #0d1a35;
+  --item-bg: #060d1f;
+  --bg-calendar: var(--component-bg);
+  --bg-cell: var(--item-bg);
+  --bg-off-day: rgba(6, 13, 31, 0.5);
+  --border-cell: rgba(34, 211, 238, 0.08);
+  --bg-input: rgba(4, 10, 26, 0.8);
+  --border: rgba(34, 211, 238, 0.1);
+}
 
 /* Zinc (Deep Dark Metallic) */
 [data-bg="zinc"] {
@@ -181,52 +207,60 @@
 
 /* ===== Accent Colors ===== */
 
-/* Violet (Default) */
+/* Cyan (Default — Neon) */
+[data-accent="cyan"] {
+  --accent-primary: #22d3ee;
+  --accent-secondary: #67e8f9;
+  --accent-glow: rgba(34, 211, 238, 0.35);
+  --accent-glow-soft: rgba(34, 211, 238, 0.12);
+}
+
+/* Violet */
 [data-accent="violet"] {
   --accent-primary: #a78bfa;
-  /* Violet 400 */
   --accent-secondary: #c4b5fd;
-  /* Violet 300 */
+  --accent-glow: rgba(167, 139, 250, 0.3);
+  --accent-glow-soft: rgba(167, 139, 250, 0.1);
 }
 
 /* Blue */
 [data-accent="blue"] {
   --accent-primary: #60a5fa;
-  /* Blue 400 */
   --accent-secondary: #93c5fd;
-  /* Blue 300 */
+  --accent-glow: rgba(96, 165, 250, 0.3);
+  --accent-glow-soft: rgba(96, 165, 250, 0.1);
 }
 
 /* Indigo */
 [data-accent="indigo"] {
   --accent-primary: #818cf8;
-  /* Indigo 400 */
   --accent-secondary: #a5b4fc;
-  /* Indigo 300 */
+  --accent-glow: rgba(129, 140, 248, 0.3);
+  --accent-glow-soft: rgba(129, 140, 248, 0.1);
 }
 
 /* Emerald */
 [data-accent="emerald"] {
   --accent-primary: #34d399;
-  /* Emerald 400 */
   --accent-secondary: #6ee7b7;
-  /* Emerald 300 */
+  --accent-glow: rgba(52, 211, 153, 0.3);
+  --accent-glow-soft: rgba(52, 211, 153, 0.1);
 }
 
 /* Orange */
 [data-accent="orange"] {
   --accent-primary: #fb923c;
-  /* Orange 400 */
   --accent-secondary: #fdba74;
-  /* Orange 300 */
+  --accent-glow: rgba(251, 146, 60, 0.3);
+  --accent-glow-soft: rgba(251, 146, 60, 0.1);
 }
 
 /* Rose */
 [data-accent="rose"] {
   --accent-primary: #fb7185;
-  /* Rose 400 */
   --accent-secondary: #fda4af;
-  /* Rose 300 */
+  --accent-glow: rgba(251, 113, 133, 0.3);
+  --accent-glow-soft: rgba(251, 113, 133, 0.1);
 }
 
 
@@ -260,6 +294,30 @@ h1, h2, h3 {
   font-family: var(--font-heading, 'Lexend'), Arial, sans-serif;
 }
 
+/* ===== Cyberpunk Light Effects Keyframes ===== */
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  33%       { transform: translate(60px, -80px) scale(1.15); opacity: 0.85; }
+  66%       { transform: translate(-40px, 40px) scale(0.9); opacity: 0.5; }
+}
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.45; }
+  40%       { transform: translate(-70px, 60px) scale(1.2); opacity: 0.7; }
+  75%       { transform: translate(50px, -30px) scale(0.85); opacity: 0.4; }
+}
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  50%       { transform: translate(40px, 70px) scale(1.1); opacity: 0.55; }
+}
+@keyframes grid-drift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
 /* ===== App Layout ===== */
 .app {
   height: 100vh;
@@ -267,9 +325,14 @@ h1, h2, h3 {
   flex-direction: row;
   background-color: var(--bg-primary);
   background-image:
-    radial-gradient(at 0% 0%, rgba(167, 139, 250, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1));
+    /* Cyan orb — top-left */
+    radial-gradient(ellipse 55% 45% at 0% 5%,  rgba(34, 211, 238, 0.18) 0%, transparent 70%),
+    /* Blue orb — top-right */
+    radial-gradient(ellipse 40% 35% at 100% 0%, rgba(56, 139, 253, 0.14) 0%, transparent 65%),
+    /* Purple orb — bottom-right */
+    radial-gradient(ellipse 50% 45% at 100% 100%, rgba(124, 58, 237, 0.12) 0%, transparent 65%),
+    /* Subtle cyan — bottom-left */
+    radial-gradient(ellipse 35% 30% at 0% 100%, rgba(34, 211, 238, 0.08) 0%, transparent 60%);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -280,22 +343,65 @@ h1, h2, h3 {
   gap: 1rem;
 }
 
+/* Grid overlay */
 .app::before {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  /* Base dimming layer */
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-drift 20s linear infinite;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Animated light orbs layer */
+.app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Orb 1 — top-left cyan pulse */
+  background:
+    radial-gradient(circle 380px at 15% 20%, rgba(34, 211, 238, 0.13) 0%, transparent 70%),
+    radial-gradient(circle 300px at 82% 75%, rgba(124, 58, 237, 0.10) 0%, transparent 70%),
+    radial-gradient(circle 250px at 55% 5%,  rgba(56, 139, 253, 0.08) 0%, transparent 70%);
+  animation: orb-float-1 18s ease-in-out infinite;
 }
 
 .app>* {
   position: relative;
   z-index: 1;
+}
+
+/* Floating orb elements — injected via JS or extra divs can use these */
+.light-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+.light-orb-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
+  top: -150px; left: -100px;
+  animation: orb-float-1 22s ease-in-out infinite;
+}
+.light-orb-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 70%);
+  bottom: -100px; right: -80px;
+  animation: orb-float-2 28s ease-in-out infinite;
+}
+.light-orb-3 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(56, 139, 253, 0.1) 0%, transparent 70%);
+  top: 40%; left: 60%;
+  animation: orb-float-3 34s ease-in-out infinite;
 }
 
 /* Sidebar Styles */
@@ -311,7 +417,7 @@ h1, h2, h3 {
   flex-direction: column;
   flex-shrink: 0;
   z-index: 50;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), 0 0 32px rgba(34, 211, 238, 0.06), inset 0 1px 0 rgba(34, 211, 238, 0.08);
   transition: width 0.25s ease;
 }
 
@@ -365,7 +471,7 @@ h1, h2, h3 {
 .nav-subgroup {
   margin-left: 0.5rem;
   padding-left: 0.5rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid rgba(34, 211, 238, 0.08);
   margin-bottom: 0.25rem;
 }
 
@@ -509,8 +615,8 @@ h1, h2, h3 {
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 20px rgba(167, 139, 250, 0.15);
-  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.12), 0 0 4px rgba(34, 211, 238, 0.08);
+  border-color: rgba(34, 211, 238, 0.25);
 }
 
 .logo-container {
@@ -522,9 +628,13 @@ h1, h2, h3 {
 .logo-text {
   font-size: var(--heading-font-size);
   font-weight: 800;
-  color: var(--accent-primary);
+  background: linear-gradient(135deg, #22d3ee 0%, #67e8f9 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   letter-spacing: -0.02em;
   text-transform: none;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.5));
 }
 
 .theme-toggle-sidebar {
@@ -649,9 +759,10 @@ h1, h2, h3 {
 }
 
 .nav-item.active {
-  background: rgba(167, 139, 250, 0.1);
+  background: rgba(34, 211, 238, 0.08);
   color: var(--accent-primary);
   font-weight: 600;
+  box-shadow: inset 0 0 12px rgba(34, 211, 238, 0.05);
 }
 
 .nav-group {
@@ -702,6 +813,7 @@ h1, h2, h3 {
   width: 3px;
   background: var(--accent-primary);
   border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px var(--accent-primary), 0 0 16px rgba(34, 211, 238, 0.4);
 }
 
 .nav-item .icon {
@@ -1249,7 +1361,7 @@ h1, h2, h3 {
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), 0 0 40px rgba(34, 211, 238, 0.04), inset 0 1px 0 rgba(34, 211, 238, 0.06);
 }
 
 .main-content {
@@ -5173,21 +5285,25 @@ header.header-container {
   width: 100%;
   padding: 0.45rem 0.75rem;
   background: transparent;
-  border: none;
-  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.06);
+  color: rgba(148, 184, 216, 0.55);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   text-align: left;
   font-family: inherit;
+  box-shadow: none;
 }
 
 .reports-ws-header:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  color: rgba(232, 244, 255, 0.9);
+  background: rgba(34, 211, 238, 0.04);
+  border-color: transparent;
+  border-bottom-color: rgba(34, 211, 238, 0.12);
 }
 
 .reports-ws-name {
@@ -5199,8 +5315,9 @@ header.header-container {
 
 .reports-ws-count {
   font-size: 0.65rem;
-  background: rgba(167, 139, 250, 0.15);
-  color: var(--accent-primary);
+  background: rgba(34, 211, 238, 0.08);
+  color: #67e8f9;
+  border: 1px solid rgba(34, 211, 238, 0.18);
   padding: 1px 6px;
   border-radius: 99px;
   font-weight: 600;
@@ -5219,24 +5336,28 @@ header.header-container {
   padding: 0.5rem 0.75rem 0.5rem 1.75rem;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  border: 1px solid transparent;
+  color: rgba(148, 184, 216, 0.5);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   text-align: left;
   font-family: inherit;
   border-left: 2px solid transparent;
+  box-shadow: none;
 }
 
 .reports-item:hover {
-  background: rgba(167, 139, 250, 0.06);
-  color: var(--text-primary);
+  background: rgba(34, 211, 238, 0.04);
+  color: rgba(232, 244, 255, 0.9);
+  border-left-color: rgba(34, 211, 238, 0.2);
 }
 
 .reports-item.active {
-  background: rgba(167, 139, 250, 0.1);
-  color: var(--accent-primary);
-  border-left-color: var(--accent-primary);
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  border-left-color: #22d3ee;
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
 }
 
 .reports-item-icon {
@@ -7584,5 +7705,598 @@ header.header-container {
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
+
+/* ============================================================
+   ██╗  ██╗███████╗ ██████╗ ███╗   ██╗
+   ███╗ ██║██╔════╝██╔═══██╗████╗  ██║
+   ██╔██╗██║█████╗  ██║   ██║██╔██╗ ██║
+   ██║╚████║██╔══╝  ██║   ██║██║╚████║
+   ██║ ╚███║███████╗╚██████╔╝██║ ╚███║
+   ╚═╝  ╚══╝╚══════╝ ╚═════╝ ╚═╝  ╚══╝
+   NEON CYBERPUNK OVERRIDE — ALL ELEMENTS
+   ============================================================ */
+
+/* ── Keyframes ── */
+@keyframes neon-border-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(34,211,238,0.3),  0 0 12px rgba(34,211,238,0.15), inset 0 0 8px rgba(34,211,238,0.04); }
+  50%       { box-shadow: 0 0 10px rgba(34,211,238,0.55), 0 0 28px rgba(34,211,238,0.28), inset 0 0 16px rgba(34,211,238,0.08); }
+}
+@keyframes neon-text-flicker {
+  0%, 95%, 100% { text-shadow: 0 0 6px currentColor, 0 0 16px currentColor; opacity: 1; }
+  96%            { text-shadow: none; opacity: 0.85; }
+}
+@keyframes neon-badge-breathe {
+  0%, 100% { box-shadow: 0 0 4px currentColor, 0 0 10px currentColor; }
+  50%       { box-shadow: 0 0 8px currentColor, 0 0 22px currentColor, 0 0 40px currentColor; }
+}
+@keyframes neon-scan {
+  0%   { background-position: 0 -100%; }
+  100% { background-position: 0 200%; }
+}
+@keyframes border-shimmer {
+  0%   { border-color: rgba(34,211,238,0.15); }
+  50%  { border-color: rgba(34,211,238,0.4); }
+  100% { border-color: rgba(34,211,238,0.15); }
+}
+
+/* ── Stat Cards ── */
+.stat-card {
+  border-color: rgba(34,211,238,0.18) !important;
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.06), 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(34,211,238,0.07) !important;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(34,211,238,0.04), transparent);
+  animation: neon-scan 4s ease-in-out infinite;
+}
+.stat-card:hover {
+  border-color: rgba(34,211,238,0.45) !important;
+  box-shadow: 0 0 16px rgba(34,211,238,0.2), 0 0 40px rgba(34,211,238,0.08), inset 0 0 16px rgba(34,211,238,0.04) !important;
+  transform: translateY(-3px) !important;
+}
+
+/* ── Stat Values — Neon Number Glow ── */
+.stat-value {
+  color: #e8f4ff !important;
+  text-shadow: 0 0 10px rgba(34,211,238,0.4), 0 0 24px rgba(34,211,238,0.2) !important;
+}
+.billing-stat-value {
+  color: #e8f4ff !important;
+  text-shadow: 0 0 8px rgba(34,211,238,0.35), 0 0 20px rgba(34,211,238,0.15) !important;
+}
+
+/* ── Stat Icons ── */
+.stat-icon--purple {
+  color: #22d3ee !important;
+  background: rgba(34,211,238,0.1) !important;
+  box-shadow: 0 0 12px rgba(34,211,238,0.25), inset 0 0 8px rgba(34,211,238,0.1) !important;
+}
+.stat-icon--blue {
+  box-shadow: 0 0 12px rgba(96,165,250,0.25), inset 0 0 8px rgba(96,165,250,0.1) !important;
+}
+.stat-icon--green {
+  box-shadow: 0 0 12px rgba(16,185,129,0.25), inset 0 0 8px rgba(16,185,129,0.1) !important;
+}
+.stat-icon--amber {
+  box-shadow: 0 0 12px rgba(245,158,11,0.25), inset 0 0 8px rgba(245,158,11,0.1) !important;
+}
+
+/* ── Billing Stat Cards ── */
+.billing-stat-card {
+  border-color: rgba(34,211,238,0.15) !important;
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.05), inset 0 1px 0 rgba(34,211,238,0.06) !important;
+}
+.billing-stat-card:hover {
+  border-color: rgba(34,211,238,0.4) !important;
+  box-shadow: 0 0 20px rgba(34,211,238,0.18), 0 0 6px rgba(34,211,238,0.1) !important;
+}
+
+/* ── Status Badges — Neon Glow ── */
+.status-badge--success,
+.status-badge.published,
+.license-status-badge {
+  border: 1px solid rgba(16,185,129,0.4) !important;
+  box-shadow: 0 0 8px rgba(16,185,129,0.3), 0 0 18px rgba(16,185,129,0.15) !important;
+  text-shadow: 0 0 6px rgba(16,185,129,0.6) !important;
+  animation: neon-badge-breathe 3s ease-in-out infinite !important;
+}
+.status-badge--warn {
+  border: 1px solid rgba(245,158,11,0.4) !important;
+  box-shadow: 0 0 8px rgba(245,158,11,0.3), 0 0 18px rgba(245,158,11,0.15) !important;
+  text-shadow: 0 0 6px rgba(245,158,11,0.6) !important;
+}
+.status-badge--danger {
+  border: 1px solid rgba(239,68,68,0.4) !important;
+  box-shadow: 0 0 8px rgba(239,68,68,0.3), 0 0 18px rgba(239,68,68,0.15) !important;
+  text-shadow: 0 0 6px rgba(239,68,68,0.6) !important;
+}
+
+/* ── Filter Chips — Neon ── */
+.filter-chip {
+  border-color: rgba(34,211,238,0.12) !important;
+  background: rgba(34,211,238,0.04) !important;
+}
+.filter-chip:hover {
+  border-color: rgba(34,211,238,0.3) !important;
+  background: rgba(34,211,238,0.08) !important;
+  box-shadow: 0 0 10px rgba(34,211,238,0.12) !important;
+  color: #22d3ee !important;
+}
+.filter-chip--active.filter-chip--success {
+  box-shadow: 0 0 10px rgba(16,185,129,0.25), 0 0 22px rgba(16,185,129,0.12) !important;
+  text-shadow: 0 0 6px rgba(16,185,129,0.5) !important;
+}
+.filter-chip--active.filter-chip--danger {
+  box-shadow: 0 0 10px rgba(239,68,68,0.25), 0 0 22px rgba(239,68,68,0.12) !important;
+  text-shadow: 0 0 6px rgba(239,68,68,0.5) !important;
+}
+.filter-chip--active.filter-chip--warn {
+  box-shadow: 0 0 10px rgba(245,158,11,0.25), 0 0 22px rgba(245,158,11,0.12) !important;
+  text-shadow: 0 0 6px rgba(245,158,11,0.5) !important;
+}
+
+/* ── Reports Source Badge ── */
+.reports-source-badge {
+  background: rgba(34,211,238,0.08) !important;
+  color: #22d3ee !important;
+  border-color: rgba(34,211,238,0.25) !important;
+  box-shadow: 0 0 8px rgba(34,211,238,0.15) !important;
+}
+
+/* ── Table Row Hover Neon ── */
+table tbody tr:hover td,
+.canvas-row:hover,
+.list-row:hover {
+  background: rgba(34,211,238,0.03) !important;
+  border-color: rgba(34,211,238,0.08) !important;
+}
+table tbody tr:hover {
+  box-shadow: inset 4px 0 0 rgba(34,211,238,0.6) !important;
+}
+table thead th {
+  border-bottom: 1px solid rgba(34,211,238,0.15) !important;
+  color: rgba(34,211,238,0.7) !important;
+  text-shadow: 0 0 8px rgba(34,211,238,0.3) !important;
+}
+
+/* ── Buttons — Neon Primary ── */
+button[class*="primary"],
+.btn-primary,
+.btn-accent,
+[class*="btn"][class*="accent"] {
+  box-shadow: 0 0 12px rgba(34,211,238,0.3), 0 0 28px rgba(34,211,238,0.12) !important;
+}
+button[class*="primary"]:hover,
+.btn-primary:hover {
+  box-shadow: 0 0 20px rgba(34,211,238,0.5), 0 0 50px rgba(34,211,238,0.2) !important;
+}
+
+/* ── Nav Item — default tối, active sáng rực ── */
+
+/* Default: hoàn toàn tối, không border, không glow */
+.nav-item {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  color: rgba(148, 184, 216, 0.6) !important;
+}
+
+/* Hover: sáng lên nhẹ */
+.nav-item:hover {
+  background: rgba(34,211,238,0.05) !important;
+  border-color: rgba(34,211,238,0.08) !important;
+  color: rgba(232, 244, 255, 0.9) !important;
+  box-shadow: none !important;
+}
+
+/* Active: SÁNG RỰC — neon full power */
+.nav-item.active {
+  background: rgba(34,211,238,0.14) !important;
+  border-color: rgba(34,211,238,0.35) !important;
+  color: #22d3ee !important;
+  font-weight: 600 !important;
+  box-shadow:
+    0 0 16px rgba(34,211,238,0.18),
+    0 0 4px rgba(34,211,238,0.12),
+    inset 0 0 20px rgba(34,211,238,0.08) !important;
+  text-shadow: 0 0 8px rgba(34,211,238,0.5) !important;
+}
+
+/* ── Sidebar Logo — Neon Pulse ── */
+.logo-text {
+  animation: neon-text-flicker 8s ease-in-out infinite !important;
+}
+
+/* ── Header Border Bottom Glow ── */
+.sidebar-header {
+  border-bottom: 1px solid rgba(34,211,238,0.15) !important;
+  box-shadow: 0 1px 0 rgba(34,211,238,0.08), 0 4px 12px rgba(34,211,238,0.05) !important;
+}
+.sidebar-footer {
+  border-top: 1px solid rgba(34,211,238,0.1) !important;
+}
+
+/* ── Page Section Headers — Subtle Glow ── */
+.health-page h2,
+.page-header h1,
+.page-title {
+  text-shadow: 0 0 20px rgba(34,211,238,0.25), 0 0 40px rgba(34,211,238,0.1) !important;
+}
+
+/* ── Notification Badge ── */
+.notif-badge {
+  box-shadow: 0 0 8px rgba(239,68,68,0.6), 0 0 20px rgba(239,68,68,0.3) !important;
+}
+
+/* ── Glass cards — border shimmer chỉ cho class cụ thể ── */
+.glass-card {
+  animation: border-shimmer 6s ease-in-out infinite !important;
+}
+/* [class*="card"] không dùng animation nữa — quá broad, gây chói */
+
+/* ── Scrollbar — Neon Cyan ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(34,211,238,0.3);
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(34,211,238,0.4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34,211,238,0.55);
+  box-shadow: 0 0 12px rgba(34,211,238,0.6);
+}
+
+/* ── Input Neon Focus ── */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(34,211,238,0.5) !important;
+  box-shadow: 0 0 0 2px rgba(34,211,238,0.12), 0 0 16px rgba(34,211,238,0.15) !important;
+  outline: none !important;
+}
+
+/* ── Group/Section Count Chips ── */
+.reports-workspace-count,
+[class*="count-badge"],
+[class*="badge-count"] {
+  background: rgba(34,211,238,0.08) !important;
+  border: 1px solid rgba(34,211,238,0.2) !important;
+  color: #67e8f9 !important;
+  box-shadow: 0 0 6px rgba(34,211,238,0.2) !important;
+}
+
+/* ── Canvas App type tag ── */
+[class*="type-tag"],
+[class*="app-type"],
+[class*="tag-canvas"],
+[class*="canvas-app-badge"] {
+  border: 1px solid rgba(34,211,238,0.3) !important;
+  box-shadow: 0 0 8px rgba(34,211,238,0.2) !important;
+  color: #22d3ee !important;
+  background: rgba(34,211,238,0.08) !important;
+}
+
+/* ============================================================
+   PRIORITY FIX #1 — CARD BORDERS: ALWAYS-ON VISIBLE
+   ============================================================ */
+
+/* Tăng opacity border lên 0.4+ — luôn visible không cần hover */
+.stat-card,
+.billing-stat-card,
+[class*="card"]:not(.theme-btn):not(.nav-item):not(.calendar-day) {
+  border-color: rgba(34,211,238,0.35) !important;
+  box-shadow:
+    0 0 0 1px rgba(34,211,238,0.12),
+    0 0 20px rgba(34,211,238,0.07),
+    0 4px 24px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(34,211,238,0.1) !important;
+}
+
+/* ============================================================
+   PRIORITY FIX #2 — SECTION HEADERS: NEON LEFT BAR
+   ============================================================ */
+
+/* Generic section/page title neon header pattern */
+.page-section-title,
+.canvas-section-header,
+.section-title,
+.group-title,
+.workspace-section-header,
+[class*="section-header"],
+[class*="section-title"],
+[class*="panel-title"],
+[class*="group-header"] h2,
+[class*="group-header"] h3 {
+  position: relative;
+  padding-left: 1rem !important;
+  color: #67e8f9 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 12px rgba(34,211,238,0.5), 0 0 28px rgba(34,211,238,0.2) !important;
+}
+.page-section-title::before,
+.canvas-section-header::before,
+.section-title::before,
+[class*="section-title"]::before,
+[class*="panel-title"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 3px;
+  background: linear-gradient(180deg, #22d3ee, #0891b2);
+  border-radius: 2px;
+  box-shadow: 0 0 8px #22d3ee, 0 0 20px rgba(34,211,238,0.6);
+}
+
+/* Page main headers (h1/h2 at top of page) */
+.health-page > h1,
+.health-page > h2,
+[class*="page"] > h1,
+[class*="page"] > h2,
+[class*="content"] > h1,
+[class*="content"] > h2 {
+  color: #e8f4ff !important;
+  text-shadow: 0 0 20px rgba(34,211,238,0.35), 0 0 50px rgba(34,211,238,0.15) !important;
+}
+
+/* Tailwind heading classes */
+.text-xl, .text-2xl {
+  text-shadow: 0 0 15px rgba(34,211,238,0.2) !important;
+}
+
+/* ============================================================
+   PRIORITY FIX #3 — CTA BUTTONS: GRADIENT NEON
+   ============================================================ */
+
+/* Tailwind accent button: bg-[var(--accent-primary)] hoặc cyan tones */
+button.bg-cyan-400,
+button.bg-cyan-500,
+button.bg-cyan-600,
+a.bg-cyan-500,
+[class*="bg-cyan"][role="button"],
+/* Fallback: buttons có text accent-colored */
+button:has(> svg + span),
+.action-btn-primary,
+.cta-btn,
+.save-btn {
+  background: linear-gradient(135deg, #0891b2 0%, #22d3ee 50%, #0e7490 100%) !important;
+  border: 1px solid rgba(34,211,238,0.6) !important;
+  color: #02060f !important;
+  font-weight: 700 !important;
+  box-shadow:
+    0 0 16px rgba(34,211,238,0.45),
+    0 0 40px rgba(34,211,238,0.2),
+    0 4px 12px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.15) !important;
+  transition: all 0.2s ease !important;
+}
+button.bg-cyan-400:hover,
+button.bg-cyan-500:hover,
+.action-btn-primary:hover,
+.cta-btn:hover,
+.save-btn:hover {
+  box-shadow:
+    0 0 28px rgba(34,211,238,0.65),
+    0 0 60px rgba(34,211,238,0.35),
+    0 6px 20px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ── Đặc biệt: Neon magenta/purple cho secondary actions (như RESET, CANCEL) ── */
+.btn-secondary-neon,
+.reset-btn,
+button[class*="secondary"][class*="neon"] {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #6d28d9 100%) !important;
+  border: 1px solid rgba(139,92,246,0.5) !important;
+  color: #e8f4ff !important;
+  box-shadow: 0 0 14px rgba(139,92,246,0.4), 0 0 32px rgba(139,92,246,0.18) !important;
+}
+
+/* ── Generic: mọi button trong app thêm subtle neon border
+   NOTE: loại trừ nav-item, nav-group-header và các button sidebar ── */
+button:not(.theme-btn):not(.nav-item):not(.nav-subgroup-header):not(.sidebar-collapse-btn):not(.nav-group-header):not(.sidebar-login-btn):not(.theme-toggle-sidebar):not(.group-toggle) {
+  transition: all 0.2s ease !important;
+}
+button:not(.theme-btn):not(.nav-item):not(.nav-subgroup-header):not(.sidebar-collapse-btn):not(.nav-group-header):not(.sidebar-login-btn):not(.theme-toggle-sidebar):hover {
+  box-shadow: 0 0 6px rgba(34,211,238,0.1) !important;
+}
+
+/* ============================================================
+   PRIORITY FIX #4 — CARD CORNER CIRCUIT ACCENTS
+   ============================================================ */
+@keyframes corner-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+/* L-shape corner cho stat cards */
+.stat-card {
+  position: relative !important;
+}
+.stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -1px !important; left: -1px !important;
+  width: 14px !important; height: 14px !important;
+  border-top: 2px solid #22d3ee !important;
+  border-left: 2px solid #22d3ee !important;
+  border-radius: 4px 0 0 0 !important;
+  box-shadow: -2px -2px 6px rgba(34,211,238,0.4) !important;
+  animation: corner-pulse 3s ease-in-out infinite !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+/* Billing stat cards corners */
+.billing-stat-card {
+  position: relative !important;
+}
+.billing-stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -1px !important; left: -1px !important;
+  width: 10px !important; height: 10px !important;
+  border-top: 2px solid rgba(34,211,238,0.7) !important;
+  border-left: 2px solid rgba(34,211,238,0.7) !important;
+  border-radius: 4px 0 0 0 !important;
+  box-shadow: -1px -1px 5px rgba(34,211,238,0.35) !important;
+  animation: corner-pulse 4s ease-in-out infinite !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+.billing-stat-card::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -1px !important; right: -1px !important;
+  width: 10px !important; height: 10px !important;
+  border-bottom: 2px solid rgba(34,211,238,0.5) !important;
+  border-right: 2px solid rgba(34,211,238,0.5) !important;
+  border-radius: 0 0 4px 0 !important;
+  box-shadow: 1px 1px 5px rgba(34,211,238,0.25) !important;
+  animation: corner-pulse 4s ease-in-out 2s infinite !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+/* ── Sidebar & Main layout also get corners ── */
+.sidebar {
+  position: relative;
+}
+.sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 6px !important; left: 6px !important;
+  width: 16px !important; height: 16px !important;
+  border-top: 1px solid rgba(34,211,238,0.4) !important;
+  border-left: 1px solid rgba(34,211,238,0.4) !important;
+  border-radius: 8px 0 0 0 !important;
+  pointer-events: none !important;
+  z-index: 100 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: corner-pulse 5s ease-in-out infinite !important;
+}
+
+/* ============================================================
+   BONUS — NEON TOGGLE SWITCHES & SLIDERS
+   ============================================================ */
+
+/* Custom range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 4px;
+  background: linear-gradient(90deg, #22d3ee var(--val, 50%), rgba(34,211,238,0.15) var(--val, 50%)) !important;
+  border-radius: 4px;
+  border: none !important;
+  box-shadow: 0 0 8px rgba(34,211,238,0.3) !important;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #22d3ee !important;
+  box-shadow: 0 0 8px #22d3ee, 0 0 20px rgba(34,211,238,0.5) !important;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.3) !important;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #22d3ee !important;
+  box-shadow: 0 0 8px #22d3ee, 0 0 20px rgba(34,211,238,0.5) !important;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.3) !important;
+}
+input[type="range"]:focus {
+  box-shadow: 0 0 16px rgba(34,211,238,0.5) !important;
+}
+
+/* Neon dot indicators — event log style */
+[class*="dot-success"],
+[class*="dot-online"],
+[class*="indicator-success"] {
+  background: #10b981 !important;
+  box-shadow: 0 0 6px #10b981, 0 0 16px rgba(16,185,129,0.4) !important;
+}
+[class*="dot-danger"],
+[class*="dot-error"],
+[class*="indicator-danger"] {
+  background: #ef4444 !important;
+  box-shadow: 0 0 6px #ef4444, 0 0 16px rgba(239,68,68,0.4) !important;
+}
+[class*="dot-warn"],
+[class*="dot-warning"],
+[class*="indicator-warn"] {
+  background: #f59e0b !important;
+  box-shadow: 0 0 6px #f59e0b, 0 0 16px rgba(245,158,11,0.4) !important;
+}
+
+/* ============================================================
+   FINAL OVERRIDE — LIST / SIDEBAR BUTTONS: LUÔN TỐI
+   Mục tiêu: reset lại mọi button là list-item về dark default
+   Cao hơn tất cả rules trên — đặt cuối cùng
+   ============================================================ */
+
+/* Mọi button là "header" của group/list đều tối */
+.reports-ws-header,
+.nav-group-header,
+.reports-workspace-title,
+button[class*="ws-header"],
+button[class*="group-header"],
+button[class*="section-header"],
+button[class*="accordion"],
+button[class*="collapse-btn"],
+button[class*="toggle-btn"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  border-bottom-color: rgba(34, 211, 238, 0.06) !important;
+  box-shadow: none !important;
+  color: rgba(148, 184, 216, 0.55) !important;
+}
+.reports-ws-header:hover,
+.nav-group-header:hover,
+button[class*="ws-header"]:hover,
+button[class*="group-header"]:hover {
+  background: rgba(34, 211, 238, 0.04) !important;
+  color: rgba(232, 244, 255, 0.88) !important;
+  border-color: transparent !important;
+  border-bottom-color: rgba(34, 211, 238, 0.12) !important;
+  box-shadow: none !important;
+}
+
+/* Billing table rows — tối mặc định */
+.billing-table tbody tr,
+.list-view-table tbody tr,
+table.billing-table tr {
+  background: transparent !important;
+}
+
+/* clickable-row (table rows trong Canvas App) */
+.clickable-row {
+  background: transparent !important;
+  transition: background 0.15s ease, box-shadow 0.15s ease !important;
+}
+.clickable-row:hover {
+  background: rgba(34, 211, 238, 0.03) !important;
+  box-shadow: inset 3px 0 0 rgba(34, 211, 238, 0.5) !important;
+}
+.clickable-row:hover td {
+  color: rgba(232, 244, 255, 0.95) !important;
 }
 

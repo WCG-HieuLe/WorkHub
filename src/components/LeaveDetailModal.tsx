@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TeamRegistration, updatePhieuDangKy, RegistrationType, ApprovalStatus, getAccessToken } from '@/services/dataverse';
 import { useMsal } from '@azure/msal-react';
 import { Save } from 'lucide-react';
+import { utcToVnInputValue } from '@/lib/dateUtils';
 
 interface LeaveDetailModalProps {
     registration: TeamRegistration;
@@ -16,8 +17,8 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({ registration
     // Initialize form data directly from props
     const [editData, setEditData] = useState({
         type: registration.crdfd_loaiangky,
-        startDate: registration.crdfd_tungay ? registration.crdfd_tungay.substring(0, 16) : '',
-        endDate: registration.crdfd_enngay ? registration.crdfd_enngay.substring(0, 16) : '',
+        startDate: utcToVnInputValue(registration.crdfd_tungay),
+        endDate: utcToVnInputValue(registration.crdfd_enngay),
         hours: registration.crdfd_sogio2 || 0,
         reason: registration.crdfd_diengiai || '',
         quanLyTructiep: registration.crdfd_quanlytructiep || '',
@@ -30,8 +31,8 @@ export const LeaveDetailModal: React.FC<LeaveDetailModalProps> = ({ registration
     useEffect(() => {
         setEditData({
             type: registration.crdfd_loaiangky,
-            startDate: registration.crdfd_tungay ? registration.crdfd_tungay.substring(0, 16) : '',
-            endDate: registration.crdfd_enngay ? registration.crdfd_enngay.substring(0, 16) : '',
+            startDate: utcToVnInputValue(registration.crdfd_tungay),
+            endDate: utcToVnInputValue(registration.crdfd_enngay),
             hours: registration.crdfd_sogio2 || 0,
             reason: registration.crdfd_diengiai || '',
             quanLyTructiep: registration.crdfd_quanlytructiep || '',

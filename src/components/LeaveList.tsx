@@ -1,5 +1,6 @@
 import React from 'react';
 import { TeamRegistration, ApprovalStatus } from '@/services/dataverse';
+import { formatDateVN } from '@/lib/dateUtils';
 
 interface LeaveListProps {
     registrations: TeamRegistration[];
@@ -43,9 +44,9 @@ export const LeaveList: React.FC<LeaveListProps> = ({ registrations, onSelect })
                                     </td>
                                     <td>{getTypeName(reg.crdfd_loaiangky)}</td>
                                     <td>
-                                        <div>{formatDate(reg.crdfd_tungay)}</div>
+                                        <div>{formatDateVN(reg.crdfd_tungay)}</div>
                                         {reg.crdfd_tungay !== reg.crdfd_enngay && (
-                                            <div className="text-sm text-muted">→ {formatDate(reg.crdfd_enngay)}</div>
+                                            <div className="text-sm text-muted">→ {formatDateVN(reg.crdfd_enngay)}</div>
                                         )}
                                         {reg.crdfd_sogio2 && reg.crdfd_sogio2 > 0 && (
                                             <div className="text-xs badge" style={{ marginTop: '0.25rem', display: 'inline-block' }}>{reg.crdfd_sogio2} giờ</div>
@@ -100,8 +101,4 @@ function getStatusClass(status?: number): string {
     }
 }
 
-function formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('vi-VN');
-}
+// formatDate → dùng formatDateVN từ @/lib/dateUtils (đã convert UTC → UTC+7)

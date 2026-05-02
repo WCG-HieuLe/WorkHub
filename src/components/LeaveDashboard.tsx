@@ -3,6 +3,7 @@ import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { toast } from 'sonner';
 import { fetchPersonalRegistrations, fetchDNTTRecords, fetchEmployeeCode, fetchSubjectId, getAccessToken, TeamRegistration, DNTTRecord, getApprovalStatusText, updateDNTTStatus, fetchApproverRegistrations } from '@/services/dataverse';
 import { LeaveDetailModal } from '@/components/LeaveDetailModal';
+import { formatDateVN } from '@/lib/dateUtils';
 
 interface LeaveDashboardProps {
     employeeId: string | null;
@@ -89,10 +90,8 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({ employeeId, empl
         loadData();
     }, [loadData]);
 
-    const formatDate = (dateStr?: string) => {
-        if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
+    // formatDate → dùng formatDateVN từ @/lib/dateUtils (đã convert UTC → UTC+7)
+    const formatDate = formatDateVN;
 
     const formatCurrency = (amount?: number) => {
         if (!amount) return '-';
